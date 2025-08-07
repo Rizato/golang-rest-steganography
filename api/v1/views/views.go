@@ -13,20 +13,20 @@ func ConfigureViews(stats *middleware.Stats) http.Handler {
 
 	encodeHandler := handlers.NewEncodeHandler(validator)
 	// POST create a new job to steg the given image
-	mux.Handle("POST /api/v1/encode", encodeHandler)
+	mux.Handle("POST /api/v1/encode", http.StripPrefix("/api/v1/", encodeHandler))
 
 	// Get details about a job, and possibly the stegg'd jpeg
-	mux.Handle("GET /api/v1/encode/{id}", encodeHandler)
+	mux.Handle("GET /api/v1/encode/{id}", http.StripPrefix("/api/v1/", encodeHandler))
 
 	// Post create a job to read the encoded message, if found
 	decodeHandler := handlers.NewDecodeHandler(validator)
-	mux.Handle("POST /api/v1/decode", decodeHandler)
+	mux.Handle("POST /api/v1/decode", http.StripPrefix("/api/v1/", decodeHandler))
 
 	// Get the message if one was stegg'd
-	mux.Handle("GET /api/v1/decode/{id}", decodeHandler)
+	mux.Handle("GET /api/v1/decode/{id}", http.StripPrefix("/api/v1/", decodeHandler))
 
 	// Liveness check, and stats
 	statsHandler := handlers.NewStatsHandler(stats)
-	mux.Handle("GET /api/v1/stats", statsHandler)
+	mux.Handle("GET /api/v1/stats", http.StripPrefix("/api/v1/", statsHandler))
 	return mux
 }
