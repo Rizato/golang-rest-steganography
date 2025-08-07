@@ -3,12 +3,12 @@ package main
 import (
 	"log"
 	"net/http"
-	"steg/views/api/v1"
+	"steg/api/v1/views"
 )
 
 func main() {
 	server := http.NewServeMux()
 	log.Printf("Listening on port 808")
-	v1.ConfigureViews(server)
+	views.ConfigureViews(server)
 	log.Fatal(http.ListenAndServe(":8080", server))
 }

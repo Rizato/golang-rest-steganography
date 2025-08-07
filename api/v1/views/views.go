@@ -1,9 +1,9 @@
-package v1
+package views
 
 import (
 	"net/http"
+	"steg/api/v1/handlers"
 	files "steg/files"
-	handlers "steg/handlers/v1"
 	"steg/middleware"
 )
 

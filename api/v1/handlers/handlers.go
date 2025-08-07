@@ -1,12 +1,12 @@
-package v1
+package handlers
 
 import (
 	"encoding/json"
 	"github.com/google/uuid"
 	"io"
 	"net/http"
+	"steg/api/v1/models"
 	files "steg/files"
-	models "steg/models/v1"
 )
 
 type EncodeHandler struct {
