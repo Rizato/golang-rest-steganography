@@ -21,8 +21,8 @@ func NewStats() *Stats {
 func (s *Stats) TrackCall(method string, path string, duration time.Duration) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	s.RequestCount[method+path]++
-	s.ResponseTime[method+path] += duration
+	s.RequestCount[method+" "+path]++
+	s.ResponseTime[method+" "+path] += duration
 }
 
 func (s *Stats) GetStats() map[string]interface{} {
