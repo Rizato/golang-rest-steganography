@@ -49,26 +49,33 @@ func (h *GenericJobHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 func (h *GenericJobHandler[T]) GetHandler(w http.ResponseWriter, r *http.Request) {
 	jobId := r.PathValue("id")
-	job, err := h.GetJob(jobId)
+	job, found, err := h.GetJob(jobId)
 	if err != nil {
+		http.Error(w, "400 Bad Request", http.StatusBadRequest)
+		return
+	}
+
+	if !found {
 		http.Error(w, "404 Not Found", http.StatusNotFound)
 		return
 	}
 
 	err = writeJSON(w, http.StatusAccepted, job)
 	if err != nil {
-		http.Error(w, "400 Internal Server Error", http.StatusInternalServerError)
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 }
 
-func (h *GenericJobHandler[T]) GetJob(jobId string) (T, error) {
+func (h *GenericJobHandler[T]) GetJob(jobId string) (T, bool, error) {
 	jobUuid, err := uuid.Parse(jobId)
 	if err != nil {
 		// Get a zero'd value (nil when pointer)
-		return h.jobs[uuid.New()], err
+		var job T
+		return job, false, err
 	}
-	return h.jobs[jobUuid], nil
+	job, found := h.jobs[jobUuid]
+	return job, found, nil
 }
 
 func (h *GenericJobHandler[T]) PostHandler(w http.ResponseWriter, r *http.Request) {
@@ -89,7 +96,7 @@ func (h *GenericJobHandler[T]) PostHandler(w http.ResponseWriter, r *http.Reques
 	job.SetImagePath(name)
 	err = writeJSON(w, http.StatusAccepted, job)
 	if err != nil {
-		http.Error(w, "400 Internal Server Error", http.StatusInternalServerError)
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 	// Starts a process in goroutine
