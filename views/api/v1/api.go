@@ -7,7 +7,7 @@ import (
 	"steg/middleware"
 )
 
-func ConfigureServer(server *http.ServeMux) {
+func ConfigureViews(server *http.ServeMux) {
 	validator := files.NewFileValidator(files.DefaultMaxFilesize, files.DefaultMimeTypes...)
 	encodeHandler := handlers.NewEncodeHandler(validator)
 	// POST create a new job to steg the given image
