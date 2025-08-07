@@ -15,7 +15,7 @@ type Stats struct {
 }
 
 func NewStats() *Stats {
-	return &Stats{RequestCount: make(map[string]int64), StartTime: time.Now()}
+	return &Stats{RequestCount: make(map[string]int64), ResponseTime: make(map[string]time.Duration), StartTime: time.Now()}
 }
 
 func (s *Stats) TrackCall(method string, path string, duration time.Duration) {
@@ -44,8 +44,8 @@ func (s *Stats) GetStats() map[string]interface{} {
 
 		endpoints[endpoint] = map[string]interface{}{
 			"count":      count,
-			"total_time": s.ResponseTime[endpoint],
-			"avg_time":   avgDuration,
+			"total_time": s.ResponseTime[endpoint].String(),
+			"avg_time":   avgDuration.String(),
 		}
 	}
 

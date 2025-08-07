@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"log"
 	"net/http"
 	"steg/api/v1/views"
@@ -16,6 +17,9 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle("/api/v1/", apiV1)
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, "Working!\n")
+	})
 
 	// add middleware
 	handler := middleware.ConfigureMiddleware(mux, stats)
