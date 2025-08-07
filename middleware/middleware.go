@@ -9,8 +9,8 @@ type Middleware = func(http.Handler) http.Handler
 
 var DefaultMiddleware = []Middleware{LoggerMiddleware, StatsMiddleware}
 
-func Apply(wrapped func(w http.ResponseWriter, req *http.Request), extra ...Middleware) http.Handler {
-	var h http.Handler = http.HandlerFunc(wrapped)
+func Apply(wrapped http.Handler, extra ...Middleware) http.Handler {
+	var h = wrapped
 	for _, middleware := range DefaultMiddleware {
 		h = middleware(h)
 	}
@@ -18,6 +18,10 @@ func Apply(wrapped func(w http.ResponseWriter, req *http.Request), extra ...Midd
 		h = extraMiddleware(h)
 	}
 	return h
+}
+
+func ApplyFunc(wrapped func(w http.ResponseWriter, req *http.Request), extra ...Middleware) http.Handler {
+	return Apply(http.HandlerFunc(wrapped), extra...)
 }
 
 // Log all requests
