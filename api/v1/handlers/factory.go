@@ -2,24 +2,24 @@ package handlers
 
 import "steg/api/v1/models"
 
-type EncodeFactory struct {
+type EmbedJobFactory struct {
 }
 
-func (h *EncodeFactory) Create() (*models.EncodeJob, error) {
-	return models.NewEncodeJob(), nil
+func (h *EmbedJobFactory) Create() (*models.EmbedJob, error) {
+	return models.NewEmbedJob(), nil
 }
 
-func NewEncodeFactory() *EncodeFactory {
-	return &EncodeFactory{}
+func NewEmbedJobFactory() *EmbedJobFactory {
+	return &EmbedJobFactory{}
 }
 
-type DecodeFactory struct {
+type ExtractJobFactory struct {
 }
 
-func (h *DecodeFactory) Create() (*models.DecodeJob, error) {
-	return models.NewDecodeJob(), nil
+func (h *ExtractJobFactory) Create() (*models.ExtractJob, error) {
+	return models.NewExtractJob(), nil
 }
 
-func NewDecodeFactory() *DecodeFactory {
-	return &DecodeFactory{}
+func NewExtractJobFactory() *ExtractJobFactory {
+	return &ExtractJobFactory{}
 }

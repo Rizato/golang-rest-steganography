@@ -11,19 +11,19 @@ func ConfigureViews(stats *middleware.Stats) http.Handler {
 	mux := http.NewServeMux()
 	validator := files.NewFileValidator(files.DefaultMaxFilesize, files.DefaultMimeTypes...)
 
-	encodeHandler := handlers.NewEncodeHandler(validator)
+	embedHandler := handlers.NewEmbedHandler(validator)
 	// POST create a new job to steg the given image
-	mux.Handle("POST /api/v1/encode", http.StripPrefix("/api/v1/", encodeHandler))
+	mux.Handle("POST /api/v1/embed", http.StripPrefix("/api/v1/", embedHandler))
 
 	// Get details about a job, and possibly the stegg'd jpeg
-	mux.Handle("GET /api/v1/encode/{id}", http.StripPrefix("/api/v1/", encodeHandler))
+	mux.Handle("GET /api/v1/embed/{id}", http.StripPrefix("/api/v1/", embedHandler))
 
-	// Post create a job to read the encoded message, if found
-	decodeHandler := handlers.NewDecodeHandler(validator)
-	mux.Handle("POST /api/v1/decode", http.StripPrefix("/api/v1/", decodeHandler))
+	// Post create a job to read the embedded message, if found
+	extractHandler := handlers.NewExtractHandler(validator)
+	mux.Handle("POST /api/v1/extract", http.StripPrefix("/api/v1/", extractHandler))
 
 	// Get the message if one was stegg'd
-	mux.Handle("GET /api/v1/decode/{id}", http.StripPrefix("/api/v1/", decodeHandler))
+	mux.Handle("GET /api/v1/extract/{id}", http.StripPrefix("/api/v1/", extractHandler))
 
 	// Liveness check, and stats
 	statsHandler := handlers.NewStatsHandler(stats)

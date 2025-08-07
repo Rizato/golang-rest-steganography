@@ -114,12 +114,12 @@ func (h *GenericJobHandler[T]) CreateJob() (T, error) {
 	return job, nil
 }
 
-func NewEncodeHandler(validator files.FileValidator) *GenericJobHandler[*models.EncodeJob] {
-	return NewGenericJobHandler[*models.EncodeJob](make(map[uuid.UUID]*models.EncodeJob), NewEncodeFactory(), "image", "raw", validator)
+func NewEmbedHandler(validator files.FileValidator) *GenericJobHandler[*models.EmbedJob] {
+	return NewGenericJobHandler[*models.EmbedJob](make(map[uuid.UUID]*models.EmbedJob), NewEmbedJobFactory(), "image", "embed", validator)
 }
 
-func NewDecodeHandler(validator files.FileValidator) *GenericJobHandler[*models.DecodeJob] {
-	return NewGenericJobHandler[*models.DecodeJob](make(map[uuid.UUID]*models.DecodeJob), NewDecodeFactory(), "image", "decode", validator)
+func NewExtractHandler(validator files.FileValidator) *GenericJobHandler[*models.ExtractJob] {
+	return NewGenericJobHandler[*models.ExtractJob](make(map[uuid.UUID]*models.ExtractJob), NewExtractJobFactory(), "image", "extract", validator)
 }
 
 type StatsHandler struct {

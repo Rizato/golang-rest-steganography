@@ -35,7 +35,7 @@ func (s Status) String() string {
 	}
 }
 
-type EncodeJob struct {
+type EmbedJob struct {
 	Uuid          uuid.UUID `json:"uuid"`
 	Status        Status    `json:"status"` // Need to add custom encoding
 	StatusMessage string    `json:"status-message"`
@@ -45,8 +45,8 @@ type EncodeJob struct {
 	UpdatedAt     time.Time `json:"updatedAt"`
 }
 
-func NewEncodeJob() *EncodeJob {
-	return &EncodeJob{
+func NewEmbedJob() *EmbedJob {
+	return &EmbedJob{
 		Uuid:          uuid.New(),
 		Status:        Submitted,
 		StatusMessage: "",
@@ -57,22 +57,22 @@ func NewEncodeJob() *EncodeJob {
 	}
 }
 
-func (j *EncodeJob) GetUUID() uuid.UUID {
+func (j *EmbedJob) GetUUID() uuid.UUID {
 	return j.Uuid
 }
 
-func (j *EncodeJob) SetImagePath(path string) {
+func (j *EmbedJob) SetImagePath(path string) {
 	j.ImagePath = path
 }
 
-func (j *EncodeJob) ProcessImage() {
+func (j *EmbedJob) ProcessImage() {
 	// Download file
 	j.Status = InProgress
 	// Add steg
 	// Update state
 }
 
-type DecodeJob struct {
+type ExtractJob struct {
 	Uuid          uuid.UUID `json:"uuid"`
 	Status        Status    `json:"status"`
 	StatusMessage string    `json:"status-message"`
@@ -82,8 +82,8 @@ type DecodeJob struct {
 	UpdatedAt     time.Time `json:"updatedAt"`
 }
 
-func NewDecodeJob() *DecodeJob {
-	return &DecodeJob{
+func NewExtractJob() *ExtractJob {
+	return &ExtractJob{
 		Uuid:          uuid.New(),
 		Status:        InProgress,
 		StatusMessage: "",
@@ -94,15 +94,15 @@ func NewDecodeJob() *DecodeJob {
 	}
 }
 
-func (j *DecodeJob) GetUUID() uuid.UUID {
+func (j *ExtractJob) GetUUID() uuid.UUID {
 	return j.Uuid
 }
 
-func (j *DecodeJob) SetImagePath(path string) {
+func (j *ExtractJob) SetImagePath(path string) {
 	j.ImagePath = path
 }
 
-func (j *DecodeJob) ProcessImage() {
+func (j *ExtractJob) ProcessImage() {
 	// Download file
 	j.Status = InProgress
 	// Check for steg

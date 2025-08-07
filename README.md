@@ -1,6 +1,6 @@
 # Steganography API Service
 
-A Go-based REST API for hiding messages within images using steganography techniques. This service allows you to encode secret messages into JPG and PNG images, and decode them back.
+A Go-based REST API for hiding messages within images using steganography techniques. This service allows you to embed secret messages into JPG and PNG images, and extract them later.
 
 ## Overview
 
@@ -8,8 +8,8 @@ Steganography is the practice of concealing messages or information within other
 
 ## Features
 
-- **Image Message Encoding**: Hide text messages within JPG and PNG images
-- **Image Message Decoding**: Extract hidden messages from steganographic images  
+- **Image Message Embedding**: Embed text messages within JPG and PNG images
+- **Image Message Extracting**: Extract hidden messages from steganographic images  
 - **Async Processing**: Non-blocking job processing with status tracking
 - **RESTful API**: Clean HTTP endpoints for all operations
 - **Middleware Stack**: Request logging, CORS, and statistics tracking
@@ -77,10 +77,10 @@ http://localhost:8080/api/v1
 
 ### Endpoints
 
-#### Encode Message into Image
+#### Embed Message into Image
 
 ```http
-POST /api/v1/encode
+POST /api/v1/embed
 ```
 **Request:**
 - Method: `POST`
@@ -100,10 +100,10 @@ POST /api/v1/encode
 }
 ```
 
-#### Get Encode Job Status
+#### Get Embed Job Status
 
 ```http
-GET /api/v1/encode/{uuid}
+GET /api/v1/embed/{uuid}
 ```
 **Response:**
 ```json
@@ -116,10 +116,10 @@ GET /api/v1/encode/{uuid}
 }
 ```
 
-#### Decode Message from Image
+#### Extract Message from Image
 
 ```http
-POST /api/v1/decode
+POST /api/v1/extract
 ```
 **Request:**
 - Method: `POST`
@@ -139,10 +139,10 @@ POST /api/v1/decode
 }
 ```
 
-#### Get Decode Job Status
+#### Get Extract Job Status
 
 ```http
-GET /api/v1/decode/{uuid}
+GET /api/v1/extract/{uuid}
 ```
 **Response:**
 ```json
@@ -167,7 +167,7 @@ GET /api/v1/stats
   "total_requests": 42,
   "uptime": "4.011104257s",
   "endpoints": {
-    "GET /api/v1/encode/{uuid}": {
+    "GET /api/v1/embed/{uuid}": {
       "count": 10,
       "total_time": "963.91µs",
       "avg_time": "96.391µs"
@@ -193,7 +193,7 @@ Jobs can have the following status values:
 
 ### EncodeJob
 ```go
-type EncodeJob struct {
+type EmbedJob struct {
     Uuid          uuid.UUID
     Status        Status
     StatusMessage string
@@ -204,9 +204,9 @@ type EncodeJob struct {
 }
 ```
 
-### DecodeJob
+### ExtractJob
 ```go
-type DecodeJob struct {
+type ExtractJob struct {
     Uuid          uuid.UUID
     Status        Status
     StatusMessage string
