@@ -7,6 +7,9 @@ import (
 	"os"
 )
 
+var DefaultMaxFilesize int64 = 64 * 1024 * 1024            // 64 meg
+var DefaultMimeTypes = []string{"image/jpeg", "image/png"} // just jpeg and png
+
 type FileTooLargeError struct{}
 
 func (e FileTooLargeError) Error() string {
@@ -70,25 +73,36 @@ func (s *MultiPartFileSaver) SaveFile() (string, error) {
 }
 
 type FileValidator struct {
-	maxFileSize    int64
-	validMimeTypes map[string]bool
+	maxFilesize int64
+	mimetypes   map[string]bool
+}
+
+func NewFileValidator(maxFilesize int64, mimetypes ...string) FileValidator {
+	mt := make(map[string]bool)
+	for _, m := range mimetypes {
+		mt[m] = true
+	}
+	return FileValidator{
+		maxFilesize: maxFilesize,
+		mimetypes:   mt,
+	}
 }
 
 func (v *FileValidator) ValidateImage(fileheader *multipart.FileHeader) error {
-	if fileheader.Size > v.maxFileSize {
+	if fileheader.Size > v.maxFilesize {
 		return FileTooLargeError{}
 	}
 
 	mimetypes := fileheader.Header["Content-Type"]
-	validMimeType := false
+	mimeMatch := false
 	for _, mt := range mimetypes {
-		if v.validMimeTypes[mt] {
-			validMimeType = true
+		if v.mimetypes[mt] {
+			mimeMatch = true
 			break
 		}
 	}
 
-	if !validMimeType {
+	if !mimeMatch {
 		return InvalidMimeType{}
 	}
 

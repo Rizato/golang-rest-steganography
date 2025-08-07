@@ -77,6 +77,10 @@ type DecodeHandler struct {
 	validator files.FileValidator
 }
 
+func NewDecodeHandler(validator files.FileValidator) *DecodeHandler {
+	return &DecodeHandler{jobs: make(map[uuid.UUID]*models.DecodeJob), validator: validator}
+}
+
 func (h *DecodeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if (*r).Method == "GET" {
 		h.DecodeGetHandler(w, r)
