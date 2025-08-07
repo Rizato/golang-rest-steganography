@@ -30,7 +30,7 @@ func (s *Stats) GetStats() map[string]interface{} {
 	defer s.mutex.RUnlock()
 
 	stats := map[string]interface{}{
-		"uptime":         time.Since(s.StartTime),
+		"uptime":         time.Since(s.StartTime).String(),
 		"total_requests": s.RequestsTotal,
 		"endpoints":      make(map[string]interface{}),
 	}
