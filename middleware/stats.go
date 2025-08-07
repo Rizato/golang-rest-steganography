@@ -2,41 +2,70 @@ package middleware
 
 import (
 	"net/http"
+	"sync"
 	"time"
 )
 
+type Stats struct {
+	mutex         sync.RWMutex
+	RequestCount  map[string]int64
+	ResponseTime  map[string]time.Duration
+	RequestsTotal int64
+	StartTime     time.Time
+}
+
+func NewStats() *Stats {
+	return &Stats{RequestCount: make(map[string]int64), StartTime: time.Now()}
+}
+
+func (s *Stats) TrackCall(method string, path string, duration time.Duration) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.RequestCount[method+path]++
+	s.ResponseTime[method+path] += duration
+}
+
+func (s *Stats) GetStats() map[string]interface{} {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	stats := map[string]interface{}{
+		"uptime":         time.Since(s.StartTime),
+		"total_requests": s.RequestsTotal,
+		"endpoints":      make(map[string]interface{}),
+	}
+
+	endpoints := stats["endpoints"].(map[string]interface{})
+	for endpoint, count := range s.RequestCount {
+		avgDuration := time.Duration(0)
+		if count > 0 {
+			avgDuration = s.ResponseTime[endpoint] / time.Duration(count)
+		}
+
+		endpoints[endpoint] = map[string]interface{}{
+			"count":      count,
+			"total_time": s.ResponseTime[endpoint],
+			"avg_time":   avgDuration,
+		}
+	}
+
+	return stats
+}
+
 type StatsMiddleware struct {
-	calls               map[string]int64
-	averageResponseTime int64
-	totalCalls          int64
+	stats *Stats
 }
 
-func NewStatsMiddleware() *StatsMiddleware {
-	return &StatsMiddleware{}
+func NewStatsMiddleware(s *Stats) *StatsMiddleware {
+	return &StatsMiddleware{stats: s}
 }
 
-// Update the stats holder, should probably be pass as an arg though
-func (s *StatsMiddleware) Wrap(next http.Handler) http.Handler {
+func (s StatsMiddleware) Wrap(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		s.TrackCall(r.Method, r.URL.Path)
+
 		start := time.Now()
 		next.ServeHTTP(w, r)
 		end := time.Now()
-
-		duration := end.Sub(start)
-		s.UpdateAverageResponseDuration(duration)
-
+		s.stats.TrackCall(r.Method, r.URL.Path, end.Sub(start))
 	})
-}
-
-func (s *StatsMiddleware) TrackCall(method string, path string) {
-	s.calls[method+path]++
-}
-
-func (s *StatsMiddleware) UpdateAverageResponseDuration(duration time.Duration) {
-	var tempDuration = (s.averageResponseTime * s.totalCalls) + duration.Milliseconds()
-
-	// Update rolling average
-	s.totalCalls += 1
-	s.averageResponseTime = tempDuration / s.totalCalls
 }

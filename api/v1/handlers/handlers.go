@@ -3,10 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"github.com/google/uuid"
-	"io"
 	"net/http"
 	"steg/api/v1/models"
 	files "steg/files"
+	"steg/middleware"
 )
 
 func writeJSON(w http.ResponseWriter, status int, data interface{}) error {
@@ -115,8 +115,20 @@ func NewDecodeHandler(validator files.FileValidator) *GenericJobHandler[*models.
 	return NewGenericJobHandler[*models.DecodeJob](make(map[uuid.UUID]*models.DecodeJob), NewDecodeFactory(), "image", "decode", validator)
 }
 
-// Get some generic stats
-// GET /api/v1/stats
-func GetStats(w http.ResponseWriter, r *http.Request) {
-	io.WriteString(w, "Hello, Stats")
+type StatsHandler struct {
+	stats *middleware.Stats
+}
+
+func NewStatsHandler(stats *middleware.Stats) *StatsHandler {
+	return &StatsHandler{stats}
+}
+
+func (h *StatsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if (*r).Method != "GET" {
+		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
+	}
+	err := writeJSON(w, http.StatusOK, h.stats.GetStats())
+	if err != nil {
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+	}
 }
