@@ -7,6 +7,8 @@ import (
 
 type ImageProcessor interface {
 	ProcessImage()
+	GetUUID() uuid.UUID
+	SetImagePath(path string)
 }
 
 type Status int
@@ -37,7 +39,7 @@ type EncodeJob struct {
 	Uuid          uuid.UUID `json:"uuid"`
 	Status        Status    `json:"status"` // Need to add custom encoding
 	StatusMessage string    `json:"status-message"`
-	RawImagePath  string    `json:"-"`
+	ImagePath     string    `json:"-"`
 	StegImagePath string    `json:"-"`
 	CreatedAt     time.Time `json:"createdAt"`
 	UpdatedAt     time.Time `json:"updatedAt"`
@@ -48,16 +50,24 @@ func NewEncodeJob() *EncodeJob {
 		Uuid:          uuid.New(),
 		Status:        Submitted,
 		StatusMessage: "",
-		RawImagePath:  "",
+		ImagePath:     "",
 		StegImagePath: "",
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
 	}
 }
 
-func (e *EncodeJob) ProcessImage() {
+func (j *EncodeJob) GetUUID() uuid.UUID {
+	return j.Uuid
+}
+
+func (j *EncodeJob) SetImagePath(path string) {
+	j.ImagePath = path
+}
+
+func (j *EncodeJob) ProcessImage() {
 	// Download file
-	e.Status = InProgress
+	j.Status = InProgress
 	// Add steg
 	// Update state
 }
@@ -84,9 +94,17 @@ func NewDecodeJob() *DecodeJob {
 	}
 }
 
-func (d *DecodeJob) ProcessImage() {
+func (j *DecodeJob) GetUUID() uuid.UUID {
+	return j.Uuid
+}
+
+func (j *DecodeJob) SetImagePath(path string) {
+	j.ImagePath = path
+}
+
+func (j *DecodeJob) ProcessImage() {
 	// Download file
-	d.Status = InProgress
+	j.Status = InProgress
 	// Check for steg
 	// Update state
 }
