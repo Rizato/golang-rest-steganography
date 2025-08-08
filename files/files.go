@@ -1,26 +1,19 @@
 package filestype
 
 import (
+	"errors"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"os"
 )
 
-var DefaultMaxFilesize int64 = 64 * 1024 * 1024            // 64 meg
-var DefaultMimeTypes = []string{"image/jpeg", "image/png"} // just jpeg and png
-
-type FileTooLargeError struct{}
-
-func (e FileTooLargeError) Error() string {
-	return "File too large"
-}
-
-type InvalidMimeType struct{}
-
-func (e InvalidMimeType) Error() string {
-	return "Invalid Mime type"
-}
+var (
+	DefaultMaxFilesize int64 = 64 * 1024 * 1024                    // 64 meg
+	DefaultMimeTypes         = []string{"image/jpeg", "image/png"} // just jpeg and png
+	FileTooLargeError        = errors.New("file too large")
+	InvalidMimeType          = errors.New("invalid mime type")
+)
 
 type MultiPartFileSaver struct {
 	r              *http.Request
@@ -74,7 +67,7 @@ func (s *MultiPartFileSaver) SaveFile() (string, error) {
 	}
 	// Don't trust client set size
 	if fileSize > s.validator.maxFilesize {
-		return "", FileTooLargeError{}
+		return "", FileTooLargeError
 	}
 	return file.Name(), nil
 }
@@ -97,7 +90,7 @@ func NewFileValidator(maxFilesize int64, mimetypes ...string) FileValidator {
 
 func (v *FileValidator) ValidateImage(fileheader *multipart.FileHeader) error {
 	if fileheader.Size > v.maxFilesize {
-		return FileTooLargeError{}
+		return FileTooLargeError
 	}
 
 	mimetypes := fileheader.Header["Content-Type"]
@@ -110,7 +103,7 @@ func (v *FileValidator) ValidateImage(fileheader *multipart.FileHeader) error {
 	}
 
 	if !mimeMatch {
-		return InvalidMimeType{}
+		return InvalidMimeType
 	}
 
 	return nil
