@@ -4,16 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"steg/api/v1/models"
 	"steg/middleware"
 )
 
-// TODO Also dump job/file counts
 type StatsHandler struct {
 	stats *middleware.Stats
+	ds    *models.Datastore
 }
 
-func NewStatsHandler(stats *middleware.Stats) *StatsHandler {
-	return &StatsHandler{stats}
+func NewStatsHandler(stats *middleware.Stats, ds *models.Datastore) *StatsHandler {
+	return &StatsHandler{stats, ds}
 }
 
 func (h *StatsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -22,7 +23,16 @@ func (h *StatsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
-	err := json.NewEncoder(w).Encode(h.stats)
+	// TODO Break down jobs by status
+	stats := map[string]interface{}{
+		"datastore": map[string]interface{}{
+			"embed-jobs":   len(h.ds.EmbedJobs),
+			"extract-jobs": len(h.ds.ExtractJobs),
+			"images":       len(h.ds.Images),
+		},
+		"requests": h.stats.GetStats(),
+	}
+	err := json.NewEncoder(w).Encode(stats)
 	if err != nil {
 		fmt.Println(err)
 	}

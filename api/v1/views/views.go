@@ -51,7 +51,7 @@ func ConfigureViews(stats *middleware.Stats) http.Handler {
 	//mux.Handle("POST /api/v1/extract/{id}/start", http.StripPrefix("/api/v1/", ))
 
 	// Liveness check, and stats
-	statsHandler := handlers.NewStatsHandler(stats)
+	statsHandler := handlers.NewStatsHandler(stats, ds)
 	mux.Handle("GET /api/v1/stats", http.StripPrefix("/api/v1/", statsHandler))
 	return mux
 }
