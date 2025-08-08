@@ -5,9 +5,48 @@ import (
 	"time"
 )
 
+type Datastore struct {
+	EmbedJobs   map[uuid.UUID]*EmbedJob
+	ExtractJobs map[uuid.UUID]*ExtractJob
+	Images      map[uuid.UUID]*ServerFile
+}
+
+func NewDatastore() *Datastore {
+	return &Datastore{
+		EmbedJobs:   make(map[uuid.UUID]*EmbedJob),
+		ExtractJobs: make(map[uuid.UUID]*ExtractJob),
+		Images:      make(map[uuid.UUID]*ServerFile),
+	}
+}
+
+type Model interface {
+	GetUUID() uuid.UUID
+	GetSchema() interface{}
+}
+
+type ServerFile struct {
+	Uuid     uuid.UUID `json:"uuid"`
+	Path     string    `json:"-"`
+	Size     int64     `json:"size"`
+	Mimetype string    `json:"mime"`
+}
+
+func NewServerFile() *ServerFile {
+	return &ServerFile{
+		Uuid: uuid.New(),
+	}
+}
+
+func (i *ServerFile) GetUUID() uuid.UUID {
+	return i.Uuid
+}
+
+func (i *ServerFile) GetSchema() interface{} {
+	return nil
+}
+
 type ImageProcessor interface {
 	ProcessImage()
-	GetUUID() uuid.UUID
 }
 
 type Status string
@@ -17,8 +56,10 @@ const (
 	Submitted  Status = "Submitted"
 	InProgress Status = "In Progress"
 	Complete   Status = "Complete"
+	Cancelled  Status = "Cancelled"
 )
 
+// TODO CASCADE DELETIONS (Do I care? DB will do that when I get there)
 type EmbedJob struct {
 	Uuid              uuid.UUID  `json:"uuid"`
 	Status            Status     `json:"status"`
@@ -44,6 +85,10 @@ func NewEmbedJob(imageUUID uuid.UUID) *EmbedJob {
 
 func (j *EmbedJob) GetUUID() uuid.UUID {
 	return j.Uuid
+}
+
+func (j *EmbedJob) GetSchema() interface{} {
+	return nil
 }
 
 func (j *EmbedJob) ProcessImage() {
@@ -77,6 +122,10 @@ func NewExtractJob(imageUUID uuid.UUID) *ExtractJob {
 
 func (j *ExtractJob) GetUUID() uuid.UUID {
 	return j.Uuid
+}
+
+func (j *ExtractJob) GetSchema() interface{} {
+	return nil
 }
 
 func (j *ExtractJob) ProcessImage() {

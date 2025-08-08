@@ -5,76 +5,41 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
-	"os"
 )
 
+// Config
 var (
 	DefaultMaxFilesize int64 = 64 * 1024 * 1024                    // 64 meg
 	DefaultMimeTypes         = []string{"image/jpeg", "image/png"} // just jpeg and png
 	FileTooLargeError        = errors.New("file too large")
-	InvalidMimeType          = errors.New("invalid mime type")
+	InvalidMimetype          = errors.New("invalid mimetype")
 )
 
-type MultiPartFileSaver struct {
-	r              *http.Request
-	uploadFilename string
-	path           string
-	name           string
-	validator      FileValidator
+// DefaultValidator Global default validator
+var DefaultValidator = NewFileValidator(DefaultMaxFilesize, DefaultMimeTypes...)
+
+// Validate Helper validator that uses the global default validator
+func Validate(fileheader *multipart.FileHeader) error {
+	return DefaultValidator.Validate(fileheader)
 }
 
-func NewMultiPartFileSaver(r *http.Request, uploadFilename string, path string, name string, validator FileValidator) *MultiPartFileSaver {
-	return &MultiPartFileSaver{
-		r,
-		uploadFilename,
-		path,
-		name,
-		validator,
+func GetMimetype(reader io.Reader) (string, error) {
+	data := make([]byte, 2048)
+	s, err := reader.Read(data)
+	if err != nil {
+		return "", err
 	}
+	return http.DetectContentType(data[:s]), nil
 }
 
-func (s *MultiPartFileSaver) SaveFile() (string, error) {
-	err := s.r.ParseMultipartForm(32 << 20)
-	if err != nil {
-		return "", err
-	}
-
-	// Get the uploaded from the form
-	uploaded, uploadedHeader, err := s.r.FormFile(s.uploadFilename)
-	if err != nil {
-		return "", err
-	}
-	defer uploaded.Close()
-
-	// Use LimitReader to stop reading beyond file size, + 1 so I can detect oversized files with spoofed values
-	limited := io.LimitReader(uploaded, DefaultMaxFilesize+1)
-
-	// Validate the size and mime types (though user supplied and can be manipulated)
-	err = s.validator.ValidateImage(uploadedHeader)
-	if err != nil {
-		return "", err
-	}
-
-	// Write to an specified dir
-	file, err := os.Create(s.path + s.name)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-	fileSize, err := io.Copy(file, limited)
-	if err != nil {
-		return "", err
-	}
-	// Don't trust client set size
-	if fileSize > s.validator.maxFilesize {
-		return "", FileTooLargeError
-	}
-	return file.Name(), nil
+func ValidateMimetype(mimetype string) error {
+	return DefaultValidator.ValidateMimetype(mimetype)
 }
 
+// FileValidator Validate files given the allowed configuration
 type FileValidator struct {
-	maxFilesize int64
-	mimetypes   map[string]bool
+	MaxFilesize  int64
+	AllowedTypes map[string]bool
 }
 
 func NewFileValidator(maxFilesize int64, mimetypes ...string) FileValidator {
@@ -83,28 +48,30 @@ func NewFileValidator(maxFilesize int64, mimetypes ...string) FileValidator {
 		mt[m] = true
 	}
 	return FileValidator{
-		maxFilesize: maxFilesize,
-		mimetypes:   mt,
+		MaxFilesize:  maxFilesize,
+		AllowedTypes: mt,
 	}
 }
 
-func (v *FileValidator) ValidateImage(fileheader *multipart.FileHeader) error {
-	if fileheader.Size > v.maxFilesize {
+func (v *FileValidator) Validate(fileheader *multipart.FileHeader) error {
+	if fileheader.Size > v.MaxFilesize {
 		return FileTooLargeError
 	}
 
 	mimetypes := fileheader.Header["Content-Type"]
-	mimeMatch := false
+
 	for _, mt := range mimetypes {
-		if v.mimetypes[mt] {
-			mimeMatch = true
-			break
+		err := v.ValidateMimetype(mt)
+		if err != nil {
+			return err
 		}
 	}
+	return nil
+}
 
-	if !mimeMatch {
-		return InvalidMimeType
+func (v *FileValidator) ValidateMimetype(mimetype string) error {
+	if !v.AllowedTypes[mimetype] {
+		return InvalidMimetype
 	}
-
 	return nil
 }

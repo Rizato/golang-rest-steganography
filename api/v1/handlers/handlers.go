@@ -2,10 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/google/uuid"
 	"net/http"
 	"steg/api/v1/models"
-	files "steg/files"
+	"steg/crud"
 	"steg/middleware"
 )
 
@@ -15,41 +16,37 @@ func writeJSON(w http.ResponseWriter, status int, data interface{}) error {
 	return json.NewEncoder(w).Encode(data)
 }
 
-type JobFactory[T models.ImageProcessor] interface {
-	Create() (T, error)
+// TODO Move this into a package with GenericCrud
+type GenericCrudHandler[T models.Model] struct {
+	crud.GenericCRUD[T]
 }
 
-type GenericJobHandler[T models.ImageProcessor] struct {
-	jobs         map[uuid.UUID]T
-	factory      JobFactory[T]
-	formFileName string
-	downloadPath string
-	validator    files.FileValidator
+func NewGenericJobHandler[T models.Model](crud crud.GenericCRUD[T]) *GenericCrudHandler[T] {
+	return &GenericCrudHandler[T]{crud}
 }
 
-func NewGenericJobHandler[T models.ImageProcessor](jobs map[uuid.UUID]T, factory JobFactory[T], formFileName string, downloadPath string, validator files.FileValidator) *GenericJobHandler[T] {
-	return &GenericJobHandler[T]{
-		jobs,
-		factory,
-		formFileName,
-		downloadPath,
-		validator,
-	}
-}
-
-func (h *GenericJobHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *GenericCrudHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if (*r).Method == "GET" {
+		// TODO List handling?
 		h.GetHandler(w, r)
 	} else if (*r).Method == "POST" {
 		h.PostHandler(w, r)
+	} else if (*r).Method == "PUT" {
+		h.PutHandler(w, r)
+	} else if (*r).Method == "DELETE" {
+		h.DeleteHandler(w, r)
 	} else {
 		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
 	}
 }
 
-func (h *GenericJobHandler[T]) GetHandler(w http.ResponseWriter, r *http.Request) {
+func (h *GenericCrudHandler[T]) GetHandler(w http.ResponseWriter, r *http.Request) {
 	jobId := r.PathValue("id")
-	job, found, err := h.GetJob(jobId)
+	jobUUID, err := uuid.Parse(jobId)
+	if err != nil {
+		http.Error(w, "400 Bad Request", http.StatusBadRequest)
+	}
+	job, found, err := h.Read(jobUUID)
 	if err != nil {
 		http.Error(w, "400 Bad Request", http.StatusBadRequest)
 		return
@@ -67,61 +64,70 @@ func (h *GenericJobHandler[T]) GetHandler(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (h *GenericJobHandler[T]) GetJob(jobId string) (T, bool, error) {
-	jobUuid, err := uuid.Parse(jobId)
-	if err != nil {
-		// Get a zero'd value (nil when pointer)
-		var job T
-		return job, false, err
-	}
-	job, found := h.jobs[jobUuid]
-	return job, found, nil
-}
+func (h *GenericCrudHandler[T]) PostHandler(w http.ResponseWriter, r *http.Request) {
+	// Decode json into proper job request struct
 
-func (h *GenericJobHandler[T]) PostHandler(w http.ResponseWriter, r *http.Request) {
-	// Create a new job
-	job, err := h.CreateJob()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	// Validate request, including check that the file exists
 
-	// Read file from multipart form, and save it
-	saver := files.NewMultiPartFileSaver(r, h.formFileName, h.downloadPath, job.GetUUID().String(), h.validator)
-	name, err := saver.SaveFile()
-	if err != nil {
-		http.Error(w, "400 Bad Request", http.StatusBadRequest)
-		return
-	}
-	job.SetImagePath(name)
-	err = writeJSON(w, http.StatusAccepted, job)
+	// Create a new job, grabbing relevant parts of the request struct
+	job, err := h.Create(r.Body)
 	if err != nil {
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	// Starts a process in goroutine
-	job.ProcessImage()
+
+	err = writeJSON(w, http.StatusCreated, job)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 }
 
-func (h *GenericJobHandler[T]) CreateJob() (T, error) {
-	job, err := h.factory.Create()
+func (h *GenericCrudHandler[T]) PutHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO
+	http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
+}
+
+func (h *GenericCrudHandler[T]) DeleteHandler(w http.ResponseWriter, r *http.Request) {
+	jobId := r.PathValue("id")
+	jobUUID, err := uuid.Parse(jobId)
 	if err != nil {
-		return job, err
+		http.Error(w, "400 Bad Request", http.StatusBadRequest)
 	}
 
-	// Store job in state
-	h.jobs[job.GetUUID()] = job
-	return job, nil
+	found, err := h.Delete(jobUUID)
+	if err != nil {
+		http.Error(w, "400 Bad Request", http.StatusBadRequest)
+		return
+	}
+
+	if !found {
+		http.Error(w, "404 Not Found", http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+	_, err = w.Write([]byte{})
+
+	if err != nil {
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 }
 
-func NewEmbedHandler(validator files.FileValidator) *GenericJobHandler[*models.EmbedJob] {
-	return NewGenericJobHandler[*models.EmbedJob](make(map[uuid.UUID]*models.EmbedJob), NewEmbedJobFactory(), "image", "embed", validator)
+func NewEmbedCrudHandler(ds *models.Datastore) *GenericCrudHandler[*models.EmbedJob] {
+	return NewGenericJobHandler[*models.EmbedJob](NewEmbedJobCrud(ds))
 }
 
-func NewExtractHandler(validator files.FileValidator) *GenericJobHandler[*models.ExtractJob] {
-	return NewGenericJobHandler[*models.ExtractJob](make(map[uuid.UUID]*models.ExtractJob), NewExtractJobFactory(), "image", "extract", validator)
+func NewExtractCrudHandler(ds *models.Datastore) *GenericCrudHandler[*models.ExtractJob] {
+	return NewGenericJobHandler[*models.ExtractJob](NewExtractJobCrud(ds))
 }
 
+func NewFileCrudHandler(ds *models.Datastore) *GenericCrudHandler[*models.ServerFile] {
+	return NewGenericJobHandler[*models.ServerFile](NewFileCrud(ds))
+}
+
+// TODO Also dump job/file counts
 type StatsHandler struct {
 	stats *middleware.Stats
 }
