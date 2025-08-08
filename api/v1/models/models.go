@@ -8,7 +8,6 @@ import (
 type ImageProcessor interface {
 	ProcessImage()
 	GetUUID() uuid.UUID
-	SetImagePath(path string)
 }
 
 type Status string
@@ -21,33 +20,29 @@ const (
 )
 
 type EmbedJob struct {
-	Uuid          uuid.UUID `json:"uuid"`
-	Status        Status    `json:"status"`
-	StatusMessage string    `json:"status-message"`
-	ImagePath     string    `json:"-"`
-	StegImagePath string    `json:"-"`
-	CreatedAt     time.Time `json:"createdAt"`
-	UpdatedAt     time.Time `json:"updatedAt"`
+	Uuid              uuid.UUID  `json:"uuid"`
+	Status            Status     `json:"status"`
+	StatusMessage     string     `json:"status-message"`
+	ImageUUID         uuid.UUID  `json:"image-uuid"`
+	EmbeddedImageUUID *uuid.UUID `json:"embedded-image-uuid"`
+	CreatedAt         time.Time  `json:"created-at"`
+	UpdatedAt         time.Time  `json:"updated-at"`
 }
 
-func NewEmbedJob() *EmbedJob {
+func NewEmbedJob(imageUUID uuid.UUID) *EmbedJob {
 	return &EmbedJob{
-		Uuid:          uuid.New(),
-		Status:        Submitted,
-		StatusMessage: "",
-		ImagePath:     "",
-		StegImagePath: "",
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
+		Uuid:              uuid.New(),
+		Status:            Submitted,
+		StatusMessage:     "",
+		ImageUUID:         imageUUID,
+		EmbeddedImageUUID: nil,
+		CreatedAt:         time.Now(),
+		UpdatedAt:         time.Now(),
 	}
 }
 
 func (j *EmbedJob) GetUUID() uuid.UUID {
 	return j.Uuid
-}
-
-func (j *EmbedJob) SetImagePath(path string) {
-	j.ImagePath = path
 }
 
 func (j *EmbedJob) ProcessImage() {
@@ -61,18 +56,18 @@ type ExtractJob struct {
 	Uuid          uuid.UUID `json:"uuid"`
 	Status        Status    `json:"status"`
 	StatusMessage string    `json:"status-message"`
-	ImagePath     string    `json:"-"` // Do not include
+	ImageUUID     uuid.UUID `json:"image-uuid"`
 	Message       string    `json:"message"`
-	CreatedAt     time.Time `json:"createdAt"`
-	UpdatedAt     time.Time `json:"updatedAt"`
+	CreatedAt     time.Time `json:"created-at"`
+	UpdatedAt     time.Time `json:"updated-at"`
 }
 
-func NewExtractJob() *ExtractJob {
+func NewExtractJob(imageUUID uuid.UUID) *ExtractJob {
 	return &ExtractJob{
 		Uuid:          uuid.New(),
-		Status:        InProgress,
+		Status:        Submitted,
 		StatusMessage: "",
-		ImagePath:     "",
+		ImageUUID:     imageUUID,
 		Message:       "",
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
@@ -81,10 +76,6 @@ func NewExtractJob() *ExtractJob {
 
 func (j *ExtractJob) GetUUID() uuid.UUID {
 	return j.Uuid
-}
-
-func (j *ExtractJob) SetImagePath(path string) {
-	j.ImagePath = path
 }
 
 func (j *ExtractJob) ProcessImage() {
