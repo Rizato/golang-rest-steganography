@@ -11,33 +11,18 @@ type ImageProcessor interface {
 	SetImagePath(path string)
 }
 
-type Status int
+type Status string
 
 const (
-	Error Status = iota
-	Submitted
-	InProgress
-	Complete
+	Error      Status = "Error"
+	Submitted  Status = "Submitted"
+	InProgress Status = "In Progress"
+	Complete   Status = "Complete"
 )
-
-func (s Status) String() string {
-	switch s {
-	case Error:
-		return "Error"
-	case Submitted:
-		return "Submitted"
-	case InProgress:
-		return "In Progress"
-	case Complete:
-		return "Complete"
-	default:
-		return "Unknown"
-	}
-}
 
 type EmbedJob struct {
 	Uuid          uuid.UUID `json:"uuid"`
-	Status        Status    `json:"status"` // Need to add custom encoding
+	Status        Status    `json:"status"`
 	StatusMessage string    `json:"status-message"`
 	ImagePath     string    `json:"-"`
 	StegImagePath string    `json:"-"`
