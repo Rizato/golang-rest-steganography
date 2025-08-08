@@ -47,15 +47,15 @@ type FullCrud[T any] interface {
 type BaseCrud[T any] interface {
 }
 
-type GenericCrudHandler[T models.Model] struct {
+type Handler[T models.Model] struct {
 	BaseCrud[T]
 }
 
-func NewGenericJobHandler[T models.Model](crud BaseCrud[T]) *GenericCrudHandler[T] {
-	return &GenericCrudHandler[T]{crud}
+func NewHandler[T models.Model](crud BaseCrud[T]) *Handler[T] {
+	return &Handler[T]{crud}
 }
 
-func (h *GenericCrudHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	// TODO List and options
 	case http.MethodGet:
@@ -76,7 +76,7 @@ func (h *GenericCrudHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (h *GenericCrudHandler[T]) GetHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler[T]) GetHandler(w http.ResponseWriter, r *http.Request) {
 	reader, ok := any(h).(Reader[T])
 	if !ok {
 		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
@@ -104,7 +104,7 @@ func (h *GenericCrudHandler[T]) GetHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (h *GenericCrudHandler[T]) PostHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler[T]) PostHandler(w http.ResponseWriter, r *http.Request) {
 	creator, ok := any(h).(Creator[T])
 	if !ok {
 		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
@@ -122,7 +122,7 @@ func (h *GenericCrudHandler[T]) PostHandler(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-func (h *GenericCrudHandler[T]) PutHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler[T]) PutHandler(w http.ResponseWriter, r *http.Request) {
 	updater, ok := any(h).(Updater[T])
 	if !ok {
 		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
@@ -150,7 +150,7 @@ func (h *GenericCrudHandler[T]) PutHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (h *GenericCrudHandler[T]) DeleteHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler[T]) DeleteHandler(w http.ResponseWriter, r *http.Request) {
 	deleter, ok := any(h).(Deleter[T])
 	if !ok {
 		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)

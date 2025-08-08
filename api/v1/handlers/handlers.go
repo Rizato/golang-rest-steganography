@@ -9,16 +9,16 @@ import (
 	"steg/middleware"
 )
 
-func NewEmbedCrudHandler(ds *models.Datastore) *crud.GenericCrudHandler[*models.EmbedJob] {
-	return crud.NewGenericJobHandler[*models.EmbedJob](NewEmbedJobCrud(ds))
+func NewEmbedCrudHandler(ds *models.Datastore) *crud.Handler[*models.EmbedJob] {
+	return crud.NewHandler[*models.EmbedJob](NewEmbedJobCrud(ds))
 }
 
-func NewExtractCrudHandler(ds *models.Datastore) *crud.GenericCrudHandler[*models.ExtractJob] {
-	return crud.NewGenericJobHandler[*models.ExtractJob](NewExtractJobCrud(ds))
+func NewExtractCrudHandler(ds *models.Datastore) *crud.Handler[*models.ExtractJob] {
+	return crud.NewHandler[*models.ExtractJob](NewExtractJobCrud(ds))
 }
 
-func NewFileCrudHandler(ds *models.Datastore) *crud.GenericCrudHandler[*models.ServerFile] {
-	return crud.NewGenericJobHandler[*models.ServerFile](NewFileCrud(ds))
+func NewFileCrudHandler(ds *models.Datastore) *crud.Handler[*models.ServerFile] {
+	return crud.NewHandler[*models.ServerFile](NewFileCrud(ds))
 }
 
 // TODO Also dump job/file counts
