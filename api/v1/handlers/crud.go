@@ -65,6 +65,14 @@ func (h *EmbedJobCrud) Read(uuid uuid.UUID) (*models.EmbedJob, bool, error) {
 	return job, found, nil
 }
 
+func (h *EmbedJobCrud) List() ([]*models.EmbedJob, error) {
+	var embedJobs = make([]*models.EmbedJob, len(h.EmbedJobs))
+	for _, job := range h.EmbedJobs {
+		embedJobs = append(embedJobs, job)
+	}
+	return embedJobs, nil
+}
+
 func (h *EmbedJobCrud) Delete(uuid uuid.UUID) (bool, error) {
 	job, found := h.EmbedJobs[uuid]
 	if !found {
@@ -112,6 +120,14 @@ func (h *ExtractJobCrud) Create(reader io.Reader) (*models.ExtractJob, error) {
 func (h *ExtractJobCrud) Read(uuid uuid.UUID) (*models.ExtractJob, bool, error) {
 	job, found := h.ExtractJobs[uuid]
 	return job, found, nil
+}
+
+func (h *ExtractJobCrud) List() ([]*models.ExtractJob, error) {
+	var extractJobs = make([]*models.ExtractJob, len(h.ExtractJobs))
+	for _, job := range h.ExtractJobs {
+		extractJobs = append(extractJobs, job)
+	}
+	return extractJobs, nil
 }
 
 func (h *ExtractJobCrud) Delete(uuid uuid.UUID) (bool, error) {

@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 	"io"
 	"net/http"
-	"steg/api/v1/models"
 )
 
 func writeJSON(w http.ResponseWriter, status int, data interface{}) error {
@@ -35,58 +34,107 @@ type Lister[T any] interface {
 	List() ([]T, error)
 }
 
-// FullCrud interface that implements crud for a given resource
-type FullCrud[T any] interface {
-	Creator[T]
-	Reader[T]
-	Updater[T]
-	Deleter[T]
-	Lister[T]
-}
-
 type BaseCrud[T any] interface {
 }
 
-type Handler[T models.Model] struct {
-	BaseCrud[T]
+type ListHandler[T any] struct {
+	service BaseCrud[T]
 }
 
-func NewHandler[T models.Model](crud BaseCrud[T]) *Handler[T] {
-	return &Handler[T]{crud}
+func NewListHandler[T any](crud BaseCrud[T]) *ListHandler[T] {
+	return &ListHandler[T]{crud}
 }
 
-func (h *Handler[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *ListHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
-	// TODO List and options
-	case http.MethodGet:
-		h.GetHandler(w, r)
-		break
+	// TODO Handle Options
 	case http.MethodPost:
-		h.PostHandler(w, r)
-		break
-	case http.MethodPut:
-		h.PutHandler(w, r)
-		break
-	case http.MethodDelete:
-		h.DeleteHandler(w, r)
-		break
+		if creator, ok := any(h).(Creator[T]); ok {
+			h.PostHandler(w, r, creator)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	case http.MethodGet:
+		if lister, ok := any(h).(Lister[T]); ok {
+			h.GetHandler(w, r, lister)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
 	default:
 		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
 		break
 	}
 }
 
-func (h *Handler[T]) GetHandler(w http.ResponseWriter, r *http.Request) {
-	reader, ok := any(h).(Reader[T])
-	if !ok {
-		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
+func (h *ListHandler[T]) PostHandler(w http.ResponseWriter, r *http.Request, creator Creator[T]) {
+	resource, err := creator.Create(r.Body)
+	if err != nil {
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		return
 	}
-	jobId := r.PathValue("id")
-	jobUUID, err := uuid.Parse(jobId)
+
+	err = writeJSON(w, http.StatusCreated, resource)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+}
+
+func (h *ListHandler[T]) GetHandler(w http.ResponseWriter, r *http.Request, lister Lister[T]) {
+	resources, err := lister.List()
+	if err != nil {
+		http.Error(w, "400 Bad Request", http.StatusBadRequest)
+		return
+	}
+
+	err = writeJSON(w, http.StatusAccepted, resources)
+	if err != nil {
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+}
+
+type ItemHandler[T any] struct {
+	service BaseCrud[T]
+}
+
+func NewItemHandler[T any](crud BaseCrud[T]) *ItemHandler[T] {
+	return &ItemHandler[T]{crud}
+}
+
+func (h *ItemHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	// TODO List and options
+	case http.MethodGet:
+		if reader, ok := any(h).(Reader[T]); ok {
+			h.GetHandler(w, r, reader)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	case http.MethodPut:
+		if updater, ok := any(h).(Updater[T]); ok {
+			h.PutHandler(w, r, updater)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	case http.MethodDelete:
+		if deleter, ok := any(h).(Deleter[T]); ok {
+			h.DeleteHandler(w, r, deleter)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	default:
+		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
+		break
+	}
+}
+
+func (h *ItemHandler[T]) GetHandler(w http.ResponseWriter, r *http.Request, reader Reader[T]) {
+	resourceId, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		http.Error(w, "400 Bad Request", http.StatusBadRequest)
 	}
-	job, found, err := reader.Read(jobUUID)
+	resource, found, err := reader.Read(resourceId)
 	if err != nil {
 		http.Error(w, "400 Bad Request", http.StatusBadRequest)
 		return
@@ -97,43 +145,20 @@ func (h *Handler[T]) GetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = writeJSON(w, http.StatusAccepted, job)
+	err = writeJSON(w, http.StatusAccepted, resource)
 	if err != nil {
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 }
 
-func (h *Handler[T]) PostHandler(w http.ResponseWriter, r *http.Request) {
-	creator, ok := any(h).(Creator[T])
-	if !ok {
-		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
-	}
-	job, err := creator.Create(r.Body)
-	if err != nil {
-		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	err = writeJSON(w, http.StatusCreated, job)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-}
-
-func (h *Handler[T]) PutHandler(w http.ResponseWriter, r *http.Request) {
-	updater, ok := any(h).(Updater[T])
-	if !ok {
-		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
-	}
-	jobId := r.PathValue("id")
-	jobUUID, err := uuid.Parse(jobId)
+func (h *ItemHandler[T]) PutHandler(w http.ResponseWriter, r *http.Request, updater Updater[T]) {
+	resourceUUID, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		http.Error(w, "400 Bad Request", http.StatusBadRequest)
 	}
 
-	job, found, err := updater.Update(jobUUID, r.Body)
+	resource, found, err := updater.Update(resourceUUID, r.Body)
 	if err != nil {
 		http.Error(w, "400 Bad Request", http.StatusBadRequest)
 		return
@@ -143,25 +168,20 @@ func (h *Handler[T]) PutHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "404 Not Found", http.StatusNotFound)
 		return
 	}
-	err = writeJSON(w, http.StatusCreated, job)
+	err = writeJSON(w, http.StatusCreated, resource)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 }
 
-func (h *Handler[T]) DeleteHandler(w http.ResponseWriter, r *http.Request) {
-	deleter, ok := any(h).(Deleter[T])
-	if !ok {
-		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
-	}
-	jobId := r.PathValue("id")
-	jobUUID, err := uuid.Parse(jobId)
+func (h *ItemHandler[T]) DeleteHandler(w http.ResponseWriter, r *http.Request, deleter Deleter[T]) {
+	resourceUUID, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		http.Error(w, "400 Bad Request", http.StatusBadRequest)
 	}
 
-	found, err := deleter.Delete(jobUUID)
+	found, err := deleter.Delete(resourceUUID)
 	if err != nil {
 		http.Error(w, "400 Bad Request", http.StatusBadRequest)
 		return

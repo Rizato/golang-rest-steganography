@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"steg/api/v1/handlers"
 	"steg/api/v1/models"
+	"steg/crud"
 	"steg/middleware"
 )
 
@@ -14,29 +15,37 @@ func ConfigureViews(stats *middleware.Stats) http.Handler {
 	// Uploads and downloads are special cases due handling file content, not json
 	// TODO Put strict rate limits on these routes
 	mux.Handle("POST /api/v1/images", http.StripPrefix("/api/v1/", handlers.HandleUpload(ds)))
-	mux.Handle("GET /api/v1/images/{id}", http.StripPrefix("/api/v1/", handlers.HandleDownload(ds)))
+	mux.Handle("GET /api/v1/images/{id}/download", http.StripPrefix("/api/v1/", handlers.HandleDownload(ds)))
 
-	// File crud, get the metadata, and support deletion
-	fileHandler := handlers.NewFileCrudHandler(ds)
-	mux.Handle("GET /api/v1/images/{id}/metadata", http.StripPrefix("/api/v1/", fileHandler))
+	// GET/DELETE files
+	fileHandler := crud.NewItemHandler[*models.ServerFile](handlers.NewFileCrud(ds))
+	mux.Handle("GET /api/v1/images/{id}", http.StripPrefix("/api/v1/", fileHandler))
 	mux.Handle("DELETE /api/v1/images/{id}", http.StripPrefix("/api/v1/", fileHandler))
 
-	embedHandler := handlers.NewEmbedCrudHandler(ds)
-	// POST create a new job to embed a message in the given image
-	mux.Handle("POST /api/v1/embed", http.StripPrefix("/api/v1/", embedHandler))
+	embedCrud := handlers.NewEmbedJobCrud(ds)
+	// POST/GET to create or list
+	embedListHandler := crud.NewListHandler[*models.EmbedJob](embedCrud)
+	mux.Handle("POST /api/v1/embed", http.StripPrefix("/api/v1/", embedListHandler))
+	mux.Handle("GET /api/v1/embed", http.StripPrefix("/api/v1/", embedListHandler))
 
-	// Get details about a job, and the url of the embedded image if finished
-	mux.Handle("GET /api/v1/embed/{id}", http.StripPrefix("/api/v1/", embedHandler))
+	// GET/DELETE to access or delete an item
+	embedJobHandler := crud.NewItemHandler[*models.EmbedJob](embedCrud)
+	mux.Handle("GET /api/v1/embed/{id}", http.StripPrefix("/api/v1/", embedJobHandler))
+	mux.Handle("DELETE /api/v1/embed/{id}", http.StripPrefix("/api/v1/", embedJobHandler))
 
 	// Trigger the processing
 	//mux.Handle("POST /api/v1/embed/{id}/start", http.StripPrefix("/api/v1/", ))
 
-	extractHandler := handlers.NewExtractCrudHandler(ds)
-	// Post create a job to read the embedded message, if found
-	mux.Handle("POST /api/v1/extract", http.StripPrefix("/api/v1/", extractHandler))
+	extractCrud := handlers.NewExtractJobCrud(ds)
+	// POST/GET to create or list
+	extractListHandler := crud.NewListHandler[*models.EmbedJob](extractCrud)
+	mux.Handle("POST /api/v1/extract", http.StripPrefix("/api/v1/", extractListHandler))
+	mux.Handle("GET /api/v1/extract", http.StripPrefix("/api/v1/", extractListHandler))
 
-	// Get the message if the image had an embedded message, and it is finished
-	mux.Handle("GET /api/v1/extract/{id}", http.StripPrefix("/api/v1/", extractHandler))
+	// GET/DELETE to access or delete an item
+	extractJobHandler := crud.NewItemHandler[*models.EmbedJob](extractCrud)
+	mux.Handle("GET /api/v1/extract/{id}", http.StripPrefix("/api/v1/", extractJobHandler))
+	mux.Handle("DELETE /api/v1/extract/{id}", http.StripPrefix("/api/v1/", extractJobHandler))
 
 	// Trigger the processing
 	//mux.Handle("POST /api/v1/extract/{id}/start", http.StripPrefix("/api/v1/", ))
