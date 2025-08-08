@@ -24,6 +24,7 @@ type EmbedJob struct {
 	Status            Status     `json:"status"`
 	StatusMessage     string     `json:"status-message"`
 	ImageUUID         uuid.UUID  `json:"image-uuid"`
+	Message           string     `json:"message"`
 	EmbeddedImageUUID *uuid.UUID `json:"embedded-image-uuid"`
 	CreatedAt         time.Time  `json:"created-at"`
 	UpdatedAt         time.Time  `json:"updated-at"`
