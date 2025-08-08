@@ -53,6 +53,9 @@ func (s *MultiPartFileSaver) SaveFile() (string, error) {
 	}
 	defer uploaded.Close()
 
+	// Use LimitReader to stop reading beyond file size, + 1 so I can detect oversized files with spoofed values
+	limited := io.LimitReader(uploaded, DefaultMaxFilesize+1)
+
 	// Validate the size and mime types (though user supplied and can be manipulated)
 	err = s.validator.ValidateImage(uploadedHeader)
 	if err != nil {
@@ -65,9 +68,13 @@ func (s *MultiPartFileSaver) SaveFile() (string, error) {
 		return "", err
 	}
 	defer file.Close()
-	_, err = io.Copy(file, uploaded)
+	fileSize, err := io.Copy(file, limited)
 	if err != nil {
 		return "", err
+	}
+	// Don't trust client set size
+	if fileSize > s.validator.maxFilesize {
+		return "", FileTooLargeError{}
 	}
 	return file.Name(), nil
 }
