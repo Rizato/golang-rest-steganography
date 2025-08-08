@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
@@ -80,7 +81,9 @@ func HandleUpload(ds *models.Datastore) http.Handler {
 		image.Mimetype = mimetype
 		ds.Images[image.GetUUID()] = image
 
-		err = writeJSON(w, http.StatusCreated, image)
+		w.WriteHeader(http.StatusCreated)
+		w.Header().Set("Content-Type", "application/json")
+		err = json.NewEncoder(w).Encode(image)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -120,6 +123,7 @@ func HandleDownload(ds *models.Datastore) http.Handler {
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		}
 
+		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", mimetype)
 		w.Header().Set("Cache-Control", "public, max-age=86400") // Cache for 1 day
 
