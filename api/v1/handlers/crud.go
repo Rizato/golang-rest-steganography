@@ -10,7 +10,6 @@ import (
 )
 
 var (
-	MethodNotAllowedError = errors.New("method not allowed")
 	MissingMessageError   = errors.New("missing message")
 	MessageTooLargeError  = errors.New("message too large")
 	MissingImageUUIDError = errors.New("missing image uuid")
@@ -66,10 +65,6 @@ func (h *EmbedJobCrud) Read(uuid uuid.UUID) (*models.EmbedJob, bool, error) {
 	return job, found, nil
 }
 
-func (h *EmbedJobCrud) Update(uuid uuid.UUID) (*models.EmbedJob, error) {
-	return nil, MethodNotAllowedError
-}
-
 func (h *EmbedJobCrud) Delete(uuid uuid.UUID) (bool, error) {
 	job, found := h.EmbedJobs[uuid]
 	if !found {
@@ -119,10 +114,6 @@ func (h *ExtractJobCrud) Read(uuid uuid.UUID) (*models.ExtractJob, bool, error) 
 	return job, found, nil
 }
 
-func (h *ExtractJobCrud) Update(uuid uuid.UUID) (*models.ExtractJob, error) {
-	return nil, MethodNotAllowedError
-}
-
 func (h *ExtractJobCrud) Delete(uuid uuid.UUID) (bool, error) {
 	job, found := h.ExtractJobs[uuid]
 	if !found {
@@ -141,17 +132,9 @@ func NewFileCrud(ds *models.Datastore) *FileCrud {
 	return &FileCrud{ds}
 }
 
-func (h *FileCrud) Create(reader io.Reader) (*models.ServerFile, error) {
-	return nil, MethodNotAllowedError
-}
-
 func (h *FileCrud) Read(uuid uuid.UUID) (*models.ServerFile, bool, error) {
 	job, found := h.Images[uuid]
 	return job, found, nil
-}
-
-func (h *FileCrud) Update(uuid uuid.UUID) (*models.ServerFile, error) {
-	return nil, MethodNotAllowedError
 }
 
 func (h *FileCrud) Delete(uuid uuid.UUID) (bool, error) {

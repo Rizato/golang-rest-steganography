@@ -15,46 +15,78 @@ func writeJSON(w http.ResponseWriter, status int, data interface{}) error {
 	return json.NewEncoder(w).Encode(data)
 }
 
-// TODO break this up into smaller parts that are composable within an overall interface (CRUDRouter)
+type Creator[T any] interface {
+	Create(io.Reader) (T, error) // POST
+}
 
-// GenericCRUD interface that implements crud for a given resource
-type GenericCRUD[T any] interface {
-	Create(io.Reader) (T, error)        // POST
-	Read(id uuid.UUID) (T, bool, error) // GET
-	Update(id uuid.UUID) (T, error)     // PUT (Should replace the full object, so I don't like unless doing PUT /obj/field/
-	Delete(id uuid.UUID) (bool, error)  // DELETE
+type Reader[T any] interface {
+	Read(uuid.UUID) (T, bool, error) // GET
+}
+
+type Updater[T any] interface {
+	Update(id uuid.UUID, reader io.Reader) (T, bool, error) // PUT
+}
+
+type Deleter[T any] interface {
+	Delete(uuid.UUID) (bool, error) // DELETE
+}
+
+type Lister[T any] interface {
+	List() ([]T, error)
+}
+
+// FullCrud interface that implements crud for a given resource
+type FullCrud[T any] interface {
+	Creator[T]
+	Reader[T]
+	Updater[T]
+	Deleter[T]
+	Lister[T]
+}
+
+type BaseCrud[T any] interface {
 }
 
 type GenericCrudHandler[T models.Model] struct {
-	GenericCRUD[T]
+	BaseCrud[T]
 }
 
-func NewGenericJobHandler[T models.Model](crud GenericCRUD[T]) *GenericCrudHandler[T] {
+func NewGenericJobHandler[T models.Model](crud BaseCrud[T]) *GenericCrudHandler[T] {
 	return &GenericCrudHandler[T]{crud}
 }
 
 func (h *GenericCrudHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if (*r).Method == "GET" {
-		// TODO List handling?
+	switch r.Method {
+	// TODO List and options
+	case http.MethodGet:
 		h.GetHandler(w, r)
-	} else if (*r).Method == "POST" {
+		break
+	case http.MethodPost:
 		h.PostHandler(w, r)
-	} else if (*r).Method == "PUT" {
+		break
+	case http.MethodPut:
 		h.PutHandler(w, r)
-	} else if (*r).Method == "DELETE" {
+		break
+	case http.MethodDelete:
 		h.DeleteHandler(w, r)
-	} else {
+		break
+	default:
 		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
+		break
 	}
 }
 
 func (h *GenericCrudHandler[T]) GetHandler(w http.ResponseWriter, r *http.Request) {
+	reader, ok := any(h).(Reader[T])
+	if !ok {
+		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
+	}
 	jobId := r.PathValue("id")
 	jobUUID, err := uuid.Parse(jobId)
 	if err != nil {
 		http.Error(w, "400 Bad Request", http.StatusBadRequest)
 	}
-	job, found, err := h.Read(jobUUID)
+	job, found, err := reader.Read(jobUUID)
 	if err != nil {
 		http.Error(w, "400 Bad Request", http.StatusBadRequest)
 		return
@@ -73,12 +105,11 @@ func (h *GenericCrudHandler[T]) GetHandler(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *GenericCrudHandler[T]) PostHandler(w http.ResponseWriter, r *http.Request) {
-	// Decode json into proper job request struct
-
-	// Validate request, including check that the file exists
-
-	// Create a new job, grabbing relevant parts of the request struct
-	job, err := h.Create(r.Body)
+	creator, ok := any(h).(Creator[T])
+	if !ok {
+		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
+	}
+	job, err := creator.Create(r.Body)
 	if err != nil {
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		return
@@ -92,18 +123,45 @@ func (h *GenericCrudHandler[T]) PostHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *GenericCrudHandler[T]) PutHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO
-	http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
-}
-
-func (h *GenericCrudHandler[T]) DeleteHandler(w http.ResponseWriter, r *http.Request) {
+	updater, ok := any(h).(Updater[T])
+	if !ok {
+		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
+	}
 	jobId := r.PathValue("id")
 	jobUUID, err := uuid.Parse(jobId)
 	if err != nil {
 		http.Error(w, "400 Bad Request", http.StatusBadRequest)
 	}
 
-	found, err := h.Delete(jobUUID)
+	job, found, err := updater.Update(jobUUID, r.Body)
+	if err != nil {
+		http.Error(w, "400 Bad Request", http.StatusBadRequest)
+		return
+	}
+
+	if !found {
+		http.Error(w, "404 Not Found", http.StatusNotFound)
+		return
+	}
+	err = writeJSON(w, http.StatusCreated, job)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+}
+
+func (h *GenericCrudHandler[T]) DeleteHandler(w http.ResponseWriter, r *http.Request) {
+	deleter, ok := any(h).(Deleter[T])
+	if !ok {
+		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
+	}
+	jobId := r.PathValue("id")
+	jobUUID, err := uuid.Parse(jobId)
+	if err != nil {
+		http.Error(w, "400 Bad Request", http.StatusBadRequest)
+	}
+
+	found, err := deleter.Delete(jobUUID)
 	if err != nil {
 		http.Error(w, "400 Bad Request", http.StatusBadRequest)
 		return
