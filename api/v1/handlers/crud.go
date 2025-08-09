@@ -9,13 +9,7 @@ import (
 	"steg/api/v1/models"
 )
 
-var (
-	MissingMessageError   = errors.New("missing message")
-	MessageTooLargeError  = errors.New("message too large")
-	MissingImageUUIDError = errors.New("missing image uuid")
-	ImageUUIDInvalidError = errors.New("image uuid invald")
-	ImageNotFoundError    = errors.New("image not found")
-)
+var ImageNotFoundError = errors.New("image not found")
 
 type EmbedJobCrud struct {
 	ds *models.Datastore
@@ -33,31 +27,15 @@ func (h *EmbedJobCrud) Create(reader io.Reader) (models.EmbedJob, error) {
 		return embedJob, err
 	}
 
-	if embedRequest.message == "" {
-		return embedJob, MissingMessageError
-	}
-
-	if len(embedRequest.message) > 1000 {
-		return embedJob, MessageTooLargeError
-	}
-
-	if embedRequest.imageUUID == "" {
-		return embedJob, MissingImageUUIDError
-	}
-
-	if len(embedRequest.imageUUID) != 36 {
-		return embedJob, ImageUUIDInvalidError
-	}
-
-	parsedUUID, err := uuid.Parse(embedRequest.imageUUID)
+	err = embedRequest.Validate()
 	if err != nil {
-		return embedJob, ImageUUIDInvalidError
+		return embedJob, err
 	}
-	image, found := h.ds.GetImage(parsedUUID)
+	image, found := h.ds.GetImage(embedRequest.ValidatedUUID)
 	if !found {
 		return embedJob, ImageNotFoundError
 	}
-	embedJob = models.NewEmbedJob(image.Uuid)
+	embedJob = models.NewEmbedJob(image)
 	h.ds.SaveEmbedJob(embedJob)
 
 	return embedJob, nil
@@ -93,24 +71,16 @@ func (h *ExtractJobCrud) Create(reader io.Reader) (models.ExtractJob, error) {
 		return extractJob, err
 	}
 
-	if extractRequest.imageUUID == "" {
-		return extractJob, MissingImageUUIDError
-	}
-
-	if len(extractRequest.imageUUID) != 36 {
-		return extractJob, ImageUUIDInvalidError
-	}
-
-	parsedUUID, err := uuid.Parse(extractRequest.imageUUID)
+	err = extractRequest.Validate()
 	if err != nil {
-		return extractJob, ImageUUIDInvalidError
+		return extractJob, err
 	}
-	image, found := h.ds.GetImage(parsedUUID)
+	image, found := h.ds.GetImage(extractRequest.ValidatedUUID)
 	if !found {
 		return extractJob, ImageNotFoundError
 	}
 
-	extractJob = models.NewExtractJob(image.Uuid)
+	extractJob = models.NewExtractJob(image)
 	h.ds.SaveExtractJob(extractJob)
 
 	return extractJob, nil

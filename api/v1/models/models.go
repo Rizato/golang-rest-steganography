@@ -51,12 +51,12 @@ type EmbedJob struct {
 	UpdatedAt         time.Time  `json:"updated-at"`
 }
 
-func NewEmbedJob(imageUUID uuid.UUID) EmbedJob {
+func NewEmbedJob(image ServerFile) EmbedJob {
 	return EmbedJob{
 		Uuid:              uuid.New(),
 		Status:            Submitted,
 		StatusMessage:     "",
-		ImageUUID:         imageUUID,
+		ImageUUID:         image.Uuid,
 		EmbeddedImageUUID: nil,
 		CreatedAt:         time.Now(),
 		UpdatedAt:         time.Now(),
@@ -84,12 +84,12 @@ type ExtractJob struct {
 	UpdatedAt     time.Time `json:"updated-at"`
 }
 
-func NewExtractJob(imageUUID uuid.UUID) ExtractJob {
+func NewExtractJob(image ServerFile) ExtractJob {
 	return ExtractJob{
 		Uuid:          uuid.New(),
 		Status:        Submitted,
 		StatusMessage: "",
-		ImageUUID:     imageUUID,
+		ImageUUID:     image.Uuid,
 		Message:       "",
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
