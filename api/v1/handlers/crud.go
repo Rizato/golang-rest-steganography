@@ -56,8 +56,10 @@ func (h *EmbedJobCrud) Create(reader io.Reader) (*models.EmbedJob, error) {
 	if !found {
 		return nil, ImageNotFoundError
 	}
+	job := models.NewEmbedJob(image.GetUUID())
+	h.EmbedJobs[job.Uuid] = job
 
-	return models.NewEmbedJob(image.GetUUID()), nil
+	return job, nil
 }
 
 func (h *EmbedJobCrud) Read(uuid uuid.UUID) (*models.EmbedJob, bool, error) {
@@ -114,7 +116,10 @@ func (h *ExtractJobCrud) Create(reader io.Reader) (*models.ExtractJob, error) {
 		return nil, ImageNotFoundError
 	}
 
-	return models.NewExtractJob(image.GetUUID()), nil
+	job := models.NewExtractJob(image.GetUUID())
+	h.ExtractJobs[job.Uuid] = job
+
+	return job, nil
 }
 
 func (h *ExtractJobCrud) Read(uuid uuid.UUID) (*models.ExtractJob, bool, error) {
