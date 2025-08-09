@@ -19,19 +19,16 @@ func ConfigureViews(stats *middleware.Stats) http.Handler {
 
 	// GET/DELETE files
 	fileHandler := crud.NewItemHandler[*models.ServerFile](handlers.NewFileCrud(ds))
-	mux.Handle("GET /api/v1/images/{id}", http.StripPrefix("/api/v1/", fileHandler))
-	mux.Handle("DELETE /api/v1/images/{id}", http.StripPrefix("/api/v1/", fileHandler))
+	mux.Handle("/api/v1/images/{id}", http.StripPrefix("/api/v1/", fileHandler))
 
 	embedCrud := handlers.NewEmbedJobCrud(ds)
 	// POST/GET to create or list
 	embedListHandler := crud.NewListHandler[*models.EmbedJob](embedCrud)
-	mux.Handle("POST /api/v1/embed", http.StripPrefix("/api/v1/", embedListHandler))
-	mux.Handle("GET /api/v1/embed", http.StripPrefix("/api/v1/", embedListHandler))
+	mux.Handle("/api/v1/embed", http.StripPrefix("/api/v1/", embedListHandler))
 
 	// GET/DELETE to access or delete an item
 	embedJobHandler := crud.NewItemHandler[*models.EmbedJob](embedCrud)
-	mux.Handle("GET /api/v1/embed/{id}", http.StripPrefix("/api/v1/", embedJobHandler))
-	mux.Handle("DELETE /api/v1/embed/{id}", http.StripPrefix("/api/v1/", embedJobHandler))
+	mux.Handle("/api/v1/embed/{id}", http.StripPrefix("/api/v1/", embedJobHandler))
 
 	// Trigger the processing
 	//mux.Handle("POST /api/v1/embed/{id}/start", http.StripPrefix("/api/v1/", ))
@@ -39,13 +36,11 @@ func ConfigureViews(stats *middleware.Stats) http.Handler {
 	extractCrud := handlers.NewExtractJobCrud(ds)
 	// POST/GET to create or list
 	extractListHandler := crud.NewListHandler[*models.EmbedJob](extractCrud)
-	mux.Handle("POST /api/v1/extract", http.StripPrefix("/api/v1/", extractListHandler))
-	mux.Handle("GET /api/v1/extract", http.StripPrefix("/api/v1/", extractListHandler))
+	mux.Handle("/api/v1/extract", http.StripPrefix("/api/v1/", extractListHandler))
 
 	// GET/DELETE to access or delete an item
 	extractJobHandler := crud.NewItemHandler[*models.EmbedJob](extractCrud)
-	mux.Handle("GET /api/v1/extract/{id}", http.StripPrefix("/api/v1/", extractJobHandler))
-	mux.Handle("DELETE /api/v1/extract/{id}", http.StripPrefix("/api/v1/", extractJobHandler))
+	mux.Handle("/api/v1/extract/{id}", http.StripPrefix("/api/v1/", extractJobHandler))
 
 	// Trigger the processing
 	//mux.Handle("POST /api/v1/extract/{id}/start", http.StripPrefix("/api/v1/", ))
