@@ -64,16 +64,12 @@ func (h *StatsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if (*r).Method != http.MethodGet {
 		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
 	}
+	
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
-	// TODO Break down jobs by status
 	stats := map[string]interface{}{
-		"datastore": map[string]interface{}{
-			"embed-jobs":   len(h.ds.EmbedJobs),
-			"extract-jobs": len(h.ds.ExtractJobs),
-			"images":       len(h.ds.Images),
-		},
-		"requests": h.stats.GetStats(),
+		"datastore": h.ds.GetStats(),
+		"requests":  h.stats.GetStats(),
 	}
 	err := json.NewEncoder(w).Encode(stats)
 	if err != nil {

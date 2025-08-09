@@ -18,148 +18,134 @@ var (
 )
 
 type EmbedJobCrud struct {
-	*models.Datastore
+	ds *models.Datastore
 }
 
 func NewEmbedJobCrud(ds *models.Datastore) *EmbedJobCrud {
 	return &EmbedJobCrud{ds}
 }
 
-func (h *EmbedJobCrud) Create(reader io.Reader) (*models.EmbedJob, error) {
+func (h *EmbedJobCrud) Create(reader io.Reader) (models.EmbedJob, error) {
 	var embedRequest CreateEmbedRequest
+	var embedJob models.EmbedJob
 	err := json.NewDecoder(reader).Decode(&embedRequest)
 	if err != nil {
-		return nil, err
+		return embedJob, err
 	}
 
 	if embedRequest.message == "" {
-		return nil, MissingMessageError
+		return embedJob, MissingMessageError
 	}
 
 	if len(embedRequest.message) > 1000 {
-		return nil, MessageTooLargeError
+		return embedJob, MessageTooLargeError
 	}
 
 	if embedRequest.imageUUID == "" {
-		return nil, MissingImageUUIDError
+		return embedJob, MissingImageUUIDError
 	}
 
 	if len(embedRequest.imageUUID) != 36 {
-		return nil, ImageUUIDInvalidError
+		return embedJob, ImageUUIDInvalidError
 	}
 
 	parsedUUID, err := uuid.Parse(embedRequest.imageUUID)
 	if err != nil {
-		return nil, ImageUUIDInvalidError
+		return embedJob, ImageUUIDInvalidError
 	}
-	image, found := h.Images[parsedUUID]
+	image, found := h.ds.GetImage(parsedUUID)
 	if !found {
-		return nil, ImageNotFoundError
+		return embedJob, ImageNotFoundError
 	}
-	job := models.NewEmbedJob(image.GetUUID())
-	h.EmbedJobs[job.Uuid] = job
+	embedJob = models.NewEmbedJob(image.Uuid)
+	h.ds.SaveEmbedJob(embedJob)
 
-	return job, nil
+	return embedJob, nil
 }
 
-func (h *EmbedJobCrud) Read(uuid uuid.UUID) (*models.EmbedJob, bool, error) {
-	job, found := h.EmbedJobs[uuid]
+func (h *EmbedJobCrud) Read(uuid uuid.UUID) (models.EmbedJob, bool, error) {
+	job, found := h.ds.GetEmbedJob(uuid)
 	return job, found, nil
 }
 
-func (h *EmbedJobCrud) List() ([]*models.EmbedJob, error) {
-	var embedJobs = make([]*models.EmbedJob, len(h.EmbedJobs))
-	for _, job := range h.EmbedJobs {
-		embedJobs = append(embedJobs, job)
-	}
-	return embedJobs, nil
+func (h *EmbedJobCrud) List() ([]models.EmbedJob, error) {
+	return h.ds.GetEmbedJobs(), nil
 }
 
 func (h *EmbedJobCrud) Delete(uuid uuid.UUID) (bool, error) {
-	job, found := h.EmbedJobs[uuid]
-	if !found {
-		return false, nil
-	}
-	delete(h.EmbedJobs, job.Uuid)
+	h.ds.DeleteEmbedJob(uuid)
 	return true, nil
 }
 
 type ExtractJobCrud struct {
-	*models.Datastore
+	ds *models.Datastore
 }
 
 func NewExtractJobCrud(ds *models.Datastore) *ExtractJobCrud {
 	return &ExtractJobCrud{ds}
 }
 
-func (h *ExtractJobCrud) Create(reader io.Reader) (*models.ExtractJob, error) {
+func (h *ExtractJobCrud) Create(reader io.Reader) (models.ExtractJob, error) {
 	var extractRequest CreateExtractRequest
+	var extractJob models.ExtractJob
 	err := json.NewDecoder(reader).Decode(&extractRequest)
 	if err != nil {
-		return nil, err
+		return extractJob, err
 	}
 
 	if extractRequest.imageUUID == "" {
-		return nil, MissingImageUUIDError
+		return extractJob, MissingImageUUIDError
 	}
 
 	if len(extractRequest.imageUUID) != 36 {
-		return nil, ImageUUIDInvalidError
+		return extractJob, ImageUUIDInvalidError
 	}
 
 	parsedUUID, err := uuid.Parse(extractRequest.imageUUID)
 	if err != nil {
-		return nil, ImageUUIDInvalidError
+		return extractJob, ImageUUIDInvalidError
 	}
-	image, found := h.Images[parsedUUID]
+	image, found := h.ds.GetImage(parsedUUID)
 	if !found {
-		return nil, ImageNotFoundError
+		return extractJob, ImageNotFoundError
 	}
 
-	job := models.NewExtractJob(image.GetUUID())
-	h.ExtractJobs[job.Uuid] = job
+	extractJob = models.NewExtractJob(image.Uuid)
+	h.ds.SaveExtractJob(extractJob)
 
-	return job, nil
+	return extractJob, nil
 }
 
-func (h *ExtractJobCrud) Read(uuid uuid.UUID) (*models.ExtractJob, bool, error) {
-	job, found := h.ExtractJobs[uuid]
+func (h *ExtractJobCrud) Read(uuid uuid.UUID) (models.ExtractJob, bool, error) {
+	job, found := h.ds.GetExtractJob(uuid)
 	return job, found, nil
 }
 
-func (h *ExtractJobCrud) List() ([]*models.ExtractJob, error) {
-	var extractJobs = make([]*models.ExtractJob, len(h.ExtractJobs))
-	for _, job := range h.ExtractJobs {
-		extractJobs = append(extractJobs, job)
-	}
-	return extractJobs, nil
+func (h *ExtractJobCrud) List() ([]models.ExtractJob, error) {
+	return h.ds.GetExtractJobs(), nil
 }
 
 func (h *ExtractJobCrud) Delete(uuid uuid.UUID) (bool, error) {
-	job, found := h.ExtractJobs[uuid]
-	if !found {
-		return false, nil
-	}
-	delete(h.EmbedJobs, job.Uuid)
+	h.ds.DeleteExtractJob(uuid)
 	return true, nil
 }
 
 // FileCrud implements RD of crud, because we have separate handlers for file content
 type FileCrud struct {
-	*models.Datastore
+	ds *models.Datastore
 }
 
 func NewFileCrud(ds *models.Datastore) *FileCrud {
 	return &FileCrud{ds}
 }
 
-func (h *FileCrud) Read(uuid uuid.UUID) (*models.ServerFile, bool, error) {
-	job, found := h.Images[uuid]
+func (h *FileCrud) Read(uuid uuid.UUID) (models.ServerFile, bool, error) {
+	job, found := h.ds.GetImage(uuid)
 	return job, found, nil
 }
 
 func (h *FileCrud) Delete(uuid uuid.UUID) (bool, error) {
-	image, found := h.Images[uuid]
+	image, found := h.ds.GetImage(uuid)
 	if !found {
 		return false, nil
 	}
@@ -168,6 +154,6 @@ func (h *FileCrud) Delete(uuid uuid.UUID) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	delete(h.EmbedJobs, image.Uuid)
+	h.ds.DeleteImage(image.Uuid)
 	return true, nil
 }

@@ -45,7 +45,7 @@ func HandleUpload(ds *models.Datastore) http.Handler {
 
 		// Write to an specified dir
 		image := models.NewServerFile()
-		file, err := os.Create("./uploads/" + image.GetUUID().String())
+		file, err := os.Create("./uploads/" + image.Uuid.String())
 		if err != nil {
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		}
@@ -79,7 +79,7 @@ func HandleUpload(ds *models.Datastore) http.Handler {
 		image.Path = file.Name()
 		image.Size = fileSize
 		image.Mimetype = mimetype
-		ds.Images[image.GetUUID()] = image
+		ds.SaveImage(image)
 
 		w.WriteHeader(http.StatusCreated)
 		w.Header().Set("Content-Type", "application/json")
@@ -99,7 +99,7 @@ func HandleDownload(ds *models.Datastore) http.Handler {
 			http.Error(w, "400 Bad Request", http.StatusBadRequest)
 		}
 
-		image, found := ds.Images[fileUUID]
+		image, found := ds.GetImage(fileUUID)
 		if !found {
 			http.Error(w, "404 Not Found", http.StatusNotFound)
 		}

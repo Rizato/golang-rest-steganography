@@ -5,22 +5,7 @@ import (
 	"time"
 )
 
-type Datastore struct {
-	EmbedJobs   map[uuid.UUID]*EmbedJob
-	ExtractJobs map[uuid.UUID]*ExtractJob
-	Images      map[uuid.UUID]*ServerFile
-}
-
-func NewDatastore() *Datastore {
-	return &Datastore{
-		EmbedJobs:   make(map[uuid.UUID]*EmbedJob),
-		ExtractJobs: make(map[uuid.UUID]*ExtractJob),
-		Images:      make(map[uuid.UUID]*ServerFile),
-	}
-}
-
 type Model interface {
-	GetUUID() uuid.UUID
 	GetSchema() interface{}
 }
 
@@ -31,17 +16,13 @@ type ServerFile struct {
 	Mimetype string    `json:"mime"`
 }
 
-func NewServerFile() *ServerFile {
-	return &ServerFile{
+func NewServerFile() ServerFile {
+	return ServerFile{
 		Uuid: uuid.New(),
 	}
 }
 
-func (i *ServerFile) GetUUID() uuid.UUID {
-	return i.Uuid
-}
-
-func (i *ServerFile) GetSchema() interface{} {
+func (i ServerFile) GetSchema() interface{} {
 	return nil
 }
 
@@ -59,7 +40,6 @@ const (
 	Cancelled  Status = "Cancelled"
 )
 
-// TODO CASCADE DELETIONS (Do I care? DB will do that when I get there)
 type EmbedJob struct {
 	Uuid              uuid.UUID  `json:"uuid"`
 	Status            Status     `json:"status"`
@@ -71,8 +51,8 @@ type EmbedJob struct {
 	UpdatedAt         time.Time  `json:"updated-at"`
 }
 
-func NewEmbedJob(imageUUID uuid.UUID) *EmbedJob {
-	return &EmbedJob{
+func NewEmbedJob(imageUUID uuid.UUID) EmbedJob {
+	return EmbedJob{
 		Uuid:              uuid.New(),
 		Status:            Submitted,
 		StatusMessage:     "",
@@ -83,15 +63,11 @@ func NewEmbedJob(imageUUID uuid.UUID) *EmbedJob {
 	}
 }
 
-func (j *EmbedJob) GetUUID() uuid.UUID {
-	return j.Uuid
-}
-
-func (j *EmbedJob) GetSchema() interface{} {
+func (j EmbedJob) GetSchema() interface{} {
 	return nil
 }
 
-func (j *EmbedJob) Start() {
+func (j EmbedJob) Start() {
 	// Download file
 	j.Status = InProgress
 	// Add steg
@@ -108,8 +84,8 @@ type ExtractJob struct {
 	UpdatedAt     time.Time `json:"updated-at"`
 }
 
-func NewExtractJob(imageUUID uuid.UUID) *ExtractJob {
-	return &ExtractJob{
+func NewExtractJob(imageUUID uuid.UUID) ExtractJob {
+	return ExtractJob{
 		Uuid:          uuid.New(),
 		Status:        Submitted,
 		StatusMessage: "",
@@ -120,15 +96,11 @@ func NewExtractJob(imageUUID uuid.UUID) *ExtractJob {
 	}
 }
 
-func (j *ExtractJob) GetUUID() uuid.UUID {
-	return j.Uuid
-}
-
-func (j *ExtractJob) GetSchema() interface{} {
+func (j ExtractJob) GetSchema() interface{} {
 	return nil
 }
 
-func (j *ExtractJob) Start() {
+func (j ExtractJob) Start() {
 	// Download file
 	j.Status = InProgress
 	// Check for steg
