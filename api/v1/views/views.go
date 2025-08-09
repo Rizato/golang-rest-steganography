@@ -30,20 +30,22 @@ func ConfigureViews(stats *middleware.Stats) http.Handler {
 	embedJobHandler := crud.NewItemHandler[*models.EmbedJob](embedCrud)
 	mux.Handle("/api/v1/embed/{id}", http.StripPrefix("/api/v1/", embedJobHandler))
 
-	// Trigger the processing
-	//mux.Handle("POST /api/v1/embed/{id}/start", http.StripPrefix("/api/v1/", ))
+	// POST to trigger the processing
+	embedStartHandler := handlers.NewJobStartHandler[*models.EmbedJob](embedCrud)
+	mux.Handle("POST /api/v1/embed/{id}/start", http.StripPrefix("/api/v1/", embedStartHandler))
 
 	extractCrud := handlers.NewExtractJobCrud(ds)
 	// POST/GET to create or list
-	extractListHandler := crud.NewListHandler[*models.EmbedJob](extractCrud)
+	extractListHandler := crud.NewListHandler[*models.ExtractJob](extractCrud)
 	mux.Handle("/api/v1/extract", http.StripPrefix("/api/v1/", extractListHandler))
 
 	// GET/DELETE to access or delete an item
-	extractJobHandler := crud.NewItemHandler[*models.EmbedJob](extractCrud)
+	extractJobHandler := crud.NewItemHandler[*models.ExtractJob](extractCrud)
 	mux.Handle("/api/v1/extract/{id}", http.StripPrefix("/api/v1/", extractJobHandler))
 
-	// Trigger the processing
-	//mux.Handle("POST /api/v1/extract/{id}/start", http.StripPrefix("/api/v1/", ))
+	// POST to trigger the processing
+	extractStartHandler := handlers.NewJobStartHandler[*models.ExtractJob](extractCrud)
+	mux.Handle("POST /api/v1/extract/{id}/start", http.StripPrefix("/api/v1/", extractStartHandler))
 
 	// Liveness check, and stats
 	statsHandler := handlers.NewStatsHandler(stats, ds)

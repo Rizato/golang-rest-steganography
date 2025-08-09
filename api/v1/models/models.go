@@ -45,8 +45,8 @@ func (i *ServerFile) GetSchema() interface{} {
 	return nil
 }
 
-type ImageProcessor interface {
-	ProcessImage()
+type Job interface {
+	Start()
 }
 
 type Status string
@@ -91,7 +91,7 @@ func (j *EmbedJob) GetSchema() interface{} {
 	return nil
 }
 
-func (j *EmbedJob) ProcessImage() {
+func (j *EmbedJob) Start() {
 	// Download file
 	j.Status = InProgress
 	// Add steg
@@ -128,7 +128,7 @@ func (j *ExtractJob) GetSchema() interface{} {
 	return nil
 }
 
-func (j *ExtractJob) ProcessImage() {
+func (j *ExtractJob) Start() {
 	// Download file
 	j.Status = InProgress
 	// Check for steg
