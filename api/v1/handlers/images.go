@@ -1,19 +1,48 @@
 package handlers
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"io"
 	"net/http"
 	"os"
 	"steg/api/v1/models"
+	"steg/api/v1/services"
 	files "steg/files"
+
+	"github.com/google/uuid"
 )
 
+// FileCrud implements RD of crud, because we have separate handlers for file content
+type FileCrud struct {
+	imageService *services.ImageService
+}
+
+func NewFileCrud(imageService *services.ImageService) *FileCrud {
+	return &FileCrud{imageService}
+}
+
+func (h *FileCrud) Read(ctx context.Context, uuid uuid.UUID) (*models.Image, error) {
+	image, err := h.imageService.GetImage(ctx, uuid)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, NotFoundError
+	}
+	return image, err
+}
+
+func (h *FileCrud) Delete(ctx context.Context, uuid uuid.UUID) error {
+	err := h.imageService.DeleteImage(ctx, uuid)
+	if errors.Is(err, sql.ErrNoRows) {
+		return NotFoundError
+	}
+	return err
+}
+
 // HandleUpload Handles user file uploads from a multipart form, adds a new ImageFile to the application state
-func HandleUpload(ds *models.Datastore) http.Handler {
+func HandleUpload(service *services.ImageService) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseMultipartForm(32 << 20)
 		if err != nil {
@@ -43,9 +72,8 @@ func HandleUpload(ds *models.Datastore) http.Handler {
 			}
 		}
 
-		// Write to an specified dir
-		image := models.NewServerFile()
-		file, err := os.Create("./uploads/" + image.Uuid.String())
+		// Write to a temporary file
+		file, err := os.CreateTemp("images", "image")
 		if err != nil {
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		}
@@ -76,10 +104,11 @@ func HandleUpload(ds *models.Datastore) http.Handler {
 			http.Error(w, "400 Bad Request", http.StatusBadRequest)
 		}
 
-		image.Path = file.Name()
-		image.Size = fileSize
-		image.Mimetype = mimetype
-		ds.SaveImage(image)
+		// Add file to the database
+		image, err := service.AddImage(r.Context(), file.Name(), mimetype, fileSize, false)
+		if err != nil {
+			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		}
 
 		w.WriteHeader(http.StatusCreated)
 		w.Header().Set("Content-Type", "application/json")
@@ -90,7 +119,7 @@ func HandleUpload(ds *models.Datastore) http.Handler {
 	})
 }
 
-func HandleDownload(ds *models.Datastore) http.Handler {
+func HandleDownload(service *services.ImageService) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Get image from datastore by id
 		fileId := r.PathValue("id")
@@ -99,9 +128,12 @@ func HandleDownload(ds *models.Datastore) http.Handler {
 			http.Error(w, "400 Bad Request", http.StatusBadRequest)
 		}
 
-		image, found := ds.GetImage(fileUUID)
-		if !found {
+		image, err := service.GetImage(r.Context(), fileUUID)
+		if errors.Is(err, NotFoundError) {
 			http.Error(w, "404 Not Found", http.StatusNotFound)
+		}
+		if err != nil {
+			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		}
 
 		// Open file
@@ -111,20 +143,8 @@ func HandleDownload(ds *models.Datastore) http.Handler {
 		}
 		defer f.Close()
 
-		// Find mimetype
-		mimetype, err := files.GetMimetype(f)
-		if err != nil {
-			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
-		}
-
-		// Reset file position
-		_, err = f.Seek(0, 0)
-		if err != nil {
-			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
-		}
-
 		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", mimetype)
+		w.Header().Set("Content-Type", image.Mimetype)
 		w.Header().Set("Cache-Control", "public, max-age=86400") // Cache for 1 day
 
 		_, err = io.Copy(w, f)
