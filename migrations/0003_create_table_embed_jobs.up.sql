@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS embed_jobs (
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
     CONSTRAINT fk_image FOREIGN KEY (image_uuid)
-        REFERENCES images(id) ON DELETE CASCADE
+        REFERENCES images(id) ON DELETE CASCADE,
     CONSTRAINT fk_embed_image FOREIGN KEY (embedded_uuid)
         REFERENCES images(id) ON DELETE CASCADE
 );
