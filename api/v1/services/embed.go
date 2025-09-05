@@ -31,7 +31,7 @@ func (service *EmbedJobService) CreateJob(ctx context.Context, image_uuid uuid.U
 	return service.JobRepository.Create(ctx, image_uuid)
 }
 
-func (service EmbedJobService) ListJobs(ctx context.Context) ([]*models.EmbedJob, error) {
+func (service *EmbedJobService) ListJobs(ctx context.Context) ([]*models.EmbedJob, error) {
 	return service.JobRepository.List(ctx)
 }
 

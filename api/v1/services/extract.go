@@ -31,7 +31,7 @@ func (service *ExtractJobService) CreateJob(ctx context.Context, image_uuid uuid
 	return service.JobRepository.Create(ctx, image_uuid)
 }
 
-func (service ExtractJobService) ListJobs(ctx context.Context) ([]*models.ExtractJob, error) {
+func (service *ExtractJobService) ListJobs(ctx context.Context) ([]*models.ExtractJob, error) {
 	return service.JobRepository.List(ctx)
 }
 
