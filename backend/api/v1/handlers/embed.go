@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"steg/api/v1/models"
+	models2 "steg/api/v1/models"
 	"steg/api/v1/services"
 
 	"github.com/google/uuid"
@@ -20,8 +20,8 @@ func NewEmbedJobCrud(service *services.EmbedJobService) *EmbedJobCrud {
 	return &EmbedJobCrud{service}
 }
 
-func (h *EmbedJobCrud) Create(ctx context.Context, reader io.Reader) (*models.EmbedJob, error) {
-	var embedRequest models.CreateEmbedRequest
+func (h *EmbedJobCrud) Create(ctx context.Context, reader io.Reader) (*models2.EmbedJob, error) {
+	var embedRequest models2.CreateEmbedRequest
 	err := json.NewDecoder(reader).Decode(&embedRequest)
 	if err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func (h *EmbedJobCrud) Create(ctx context.Context, reader io.Reader) (*models.Em
 	return h.service.CreateJob(ctx, embedRequest.ValidatedUUID)
 }
 
-func (h *EmbedJobCrud) Read(ctx context.Context, uuid uuid.UUID) (*models.EmbedJob, bool, error) {
+func (h *EmbedJobCrud) Read(ctx context.Context, uuid uuid.UUID) (*models2.EmbedJob, bool, error) {
 	job, err := h.service.GetJob(ctx, uuid)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, false, nil
@@ -45,7 +45,7 @@ func (h *EmbedJobCrud) Read(ctx context.Context, uuid uuid.UUID) (*models.EmbedJ
 	return job, true, nil
 }
 
-func (h *EmbedJobCrud) List(ctx context.Context) ([]*models.EmbedJob, error) {
+func (h *EmbedJobCrud) List(ctx context.Context) ([]*models2.EmbedJob, error) {
 	return h.service.ListJobs(ctx)
 }
 

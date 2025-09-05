@@ -5,17 +5,17 @@ import (
 	"fmt"
 	"os"
 	"steg/api/v1/models"
-	"steg/api/v1/repository"
+	repository2 "steg/api/v1/repository"
 
 	"github.com/google/uuid"
 )
 
 type EmbedJobService struct {
-	JobRepository   *repository.EmbedJobRepository
-	ImageRepository *repository.ImageRepository
+	JobRepository   *repository2.EmbedJobRepository
+	ImageRepository *repository2.ImageRepository
 }
 
-func NewEmbedJobService(jobRepository *repository.EmbedJobRepository, imageRepository *repository.ImageRepository) *EmbedJobService {
+func NewEmbedJobService(jobRepository *repository2.EmbedJobRepository, imageRepository *repository2.ImageRepository) *EmbedJobService {
 	return &EmbedJobService{
 		JobRepository:   jobRepository,
 		ImageRepository: imageRepository,

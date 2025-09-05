@@ -5,17 +5,17 @@ import (
 	"fmt"
 	"os"
 	"steg/api/v1/models"
-	"steg/api/v1/repository"
+	repository2 "steg/api/v1/repository"
 
 	"github.com/google/uuid"
 )
 
 type ExtractJobService struct {
-	JobRepository   *repository.ExtractJobRepository
-	ImageRepository *repository.ImageRepository
+	JobRepository   *repository2.ExtractJobRepository
+	ImageRepository *repository2.ImageRepository
 }
 
-func NewExtractJobService(jobRepository *repository.ExtractJobRepository, imageRepository *repository.ImageRepository) *ExtractJobService {
+func NewExtractJobService(jobRepository *repository2.ExtractJobRepository, imageRepository *repository2.ImageRepository) *ExtractJobService {
 	return &ExtractJobService{
 		JobRepository:   jobRepository,
 		ImageRepository: imageRepository,
