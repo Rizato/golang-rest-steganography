@@ -22,13 +22,13 @@ func NewExtractJobService(jobRepository *repository2.ExtractJobRepository, image
 	}
 }
 
-func (service *ExtractJobService) CreateJob(ctx context.Context, image_uuid uuid.UUID) (*models.ExtractJob, error) {
+func (service *ExtractJobService) CreateJob(ctx context.Context, imageUuid uuid.UUID) (*models.ExtractJob, error) {
 	// Get image to check
-	_, err := service.ImageRepository.GetByID(ctx, image_uuid)
+	_, err := service.ImageRepository.GetByID(ctx, imageUuid)
 	if err != nil {
 		return nil, err
 	}
-	return service.JobRepository.Create(ctx, image_uuid)
+	return service.JobRepository.Create(ctx, imageUuid)
 }
 
 func (service *ExtractJobService) ListJobs(ctx context.Context) ([]*models.ExtractJob, error) {
@@ -52,7 +52,7 @@ func (service *ExtractJobService) Start(ctx context.Context, job *models.Extract
 	if err != nil {
 		return job, err
 	}
-	// Get's a lock on the row to check if in progress
+	// Gets a lock on the row to check if in progress
 	updatedJob, err := service.JobRepository.CheckAndMarkInProgress(ctx, job)
 	if err != nil {
 		return updatedJob, err
