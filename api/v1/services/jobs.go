@@ -2,11 +2,6 @@ package services
 
 import (
 	"context"
-	"errors"
-)
-
-var (
-	AlreadyInProgress = errors.New("already in progress")
 )
 
 type JobService[T any] interface {

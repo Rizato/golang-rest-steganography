@@ -18,17 +18,17 @@ func NewExtractJobRepository(dbPool *pgxpool.Pool) *ExtractJobRepository {
 	return &ExtractJobRepository{dbPool}
 }
 
-func (receiver *ExtractJobRepository) Create(ctx context.Context, image_uuid uuid.UUID) (*models.ExtractJob, error) {
+func (repository *ExtractJobRepository) Create(ctx context.Context, image_uuid uuid.UUID) (*models.ExtractJob, error) {
 	var createdId uuid.UUID
-	err := receiver.dbPool.QueryRow(ctx, "INSERT INTO extract_jobs (image_uuid) VALUES ($1) RETURNING id", image_uuid).Scan(&createdId)
+	err := repository.dbPool.QueryRow(ctx, "INSERT INTO extract_jobs (image_uuid) VALUES ($1) RETURNING id", image_uuid).Scan(&createdId)
 	if err != nil {
 		return nil, err
 	}
-	return receiver.GetByID(ctx, createdId)
+	return repository.GetByID(ctx, createdId)
 }
 
-func (receiver *ExtractJobRepository) List(ctx context.Context) ([]*models.ExtractJob, error) {
-	rows, err := receiver.dbPool.Query(ctx, "SELECT id, status, status_message, image_uuid, message, created_at, updated_at FROM extract_jobs")
+func (repository *ExtractJobRepository) List(ctx context.Context) ([]*models.ExtractJob, error) {
+	rows, err := repository.dbPool.Query(ctx, "SELECT id, status, status_message, image_uuid, message, created_at, updated_at FROM extract_jobs")
 	if err != nil {
 		return nil, err
 	}
@@ -50,9 +50,9 @@ func (receiver *ExtractJobRepository) List(ctx context.Context) ([]*models.Extra
 	return jobs, nil
 }
 
-func (receiver *ExtractJobRepository) GetByID(ctx context.Context, uuid uuid.UUID) (*models.ExtractJob, error) {
+func (repository *ExtractJobRepository) GetByID(ctx context.Context, uuid uuid.UUID) (*models.ExtractJob, error) {
 	var job *models.ExtractJob
-	err := receiver.dbPool.QueryRow(ctx, "SELECT id, status, status_message, image_uuid, message, created_at, updated_at FROM extract_jobs WHERE id = $1", uuid.String()).Scan(&job.Uuid, &job.Status, &job.StatusMessage, &job.ImageUUID, &job.Message, &job.CreatedAt, &job.UpdatedAt)
+	err := repository.dbPool.QueryRow(ctx, "SELECT id, status, status_message, image_uuid, message, created_at, updated_at FROM extract_jobs WHERE id = $1", uuid.String()).Scan(&job.Uuid, &job.Status, &job.StatusMessage, &job.ImageUUID, &job.Message, &job.CreatedAt, &job.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -60,19 +60,90 @@ func (receiver *ExtractJobRepository) GetByID(ctx context.Context, uuid uuid.UUI
 	return job, nil
 }
 
-func (receiver ExtractJobRepository) Delete(ctx context.Context, uuid uuid.UUID) error {
-	return receiver.dbPool.QueryRow(ctx, "DELETE FROM extract_jobs WHERE id = $1", uuid.String()).Scan()
+func (repository *ExtractJobRepository) Delete(ctx context.Context, uuid uuid.UUID) error {
+	return repository.dbPool.QueryRow(ctx, "DELETE FROM extract_jobs WHERE id = $1", uuid.String()).Scan()
 }
 
-func (receiver ExtractJobRepository) StartTransaction(ctx context.Context) (pgx.Tx, error) {
-	tx, err := receiver.dbPool.Begin(ctx)
+func (repository *ExtractJobRepository) Complete(ctx context.Context, job *models.ExtractJob, message string) error {
+	tx, err := repository.dbPool.Begin(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return tx, nil
+	defer tx.Rollback(ctx)
+	jobForUpdate, err := repository.getForUpdate(ctx, tx, job.Uuid)
+	if err != nil {
+		return err
+	}
+	jobForUpdate.Status = models.Complete
+	jobForUpdate.StatusMessage = "Completed"
+	jobForUpdate.Message = message
+	jobForUpdate.UpdatedAt = time.Now()
+	err = repository.save(ctx, tx, jobForUpdate)
+	if err != nil {
+		return err
+	}
+	err = tx.Commit(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func (receiver *ExtractJobRepository) GetForUpdate(ctx context.Context, tx pgx.Tx, uuid uuid.UUID) (*models.ExtractJob, error) {
+func (repository *ExtractJobRepository) MarkFailed(ctx context.Context, job *models.ExtractJob, givenError error) error {
+	// Mark it failed
+	tx, err := repository.dbPool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	jobForUpdate, err := repository.getForUpdate(ctx, tx, job.Uuid)
+	if err != nil {
+		return err
+	}
+	jobForUpdate.Status = models.Error
+	jobForUpdate.StatusMessage = givenError.Error()
+	jobForUpdate.UpdatedAt = time.Now()
+	err = repository.save(ctx, tx, jobForUpdate)
+	if err != nil {
+		return err
+	}
+	err = tx.Commit(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (repository *ExtractJobRepository) CheckAndMarkInProgress(ctx context.Context, job *models.ExtractJob) (*models.ExtractJob, error) {
+	tx, err := repository.dbPool.Begin(ctx)
+	if err != nil {
+		return job, err
+	}
+	defer tx.Rollback(ctx)
+	jobForUpdate, err := repository.getForUpdate(ctx, tx, job.Uuid)
+	if err != nil {
+		return job, err
+	}
+	// Another job already claimed it
+	// TODO Handle if it is completed already, but allow retries with cancelled or error
+	if jobForUpdate.Status == models.InProgress {
+		return job, AlreadyInProgress
+	}
+	jobForUpdate.Status = models.InProgress
+	jobForUpdate.StatusMessage = "In Progress"
+	jobForUpdate.UpdatedAt = time.Now()
+	err = repository.save(ctx, tx, jobForUpdate)
+	if err != nil {
+		return job, err
+	}
+	err = tx.Commit(ctx)
+	if err != nil {
+		return job, err
+	}
+	return jobForUpdate, nil
+}
+
+func (repository *ExtractJobRepository) getForUpdate(ctx context.Context, tx pgx.Tx, uuid uuid.UUID) (*models.ExtractJob, error) {
 	var job *models.ExtractJob
 	err := tx.QueryRow(ctx, "SELECT id, status, status_message, image_uuid, message, created_at, updated_at FROM extract_jobs WHERE id = $1 FOR UPDATE", uuid.String()).Scan(&job.Uuid, &job.Status, &job.StatusMessage, &job.ImageUUID, &job.Message, &job.CreatedAt, &job.UpdatedAt)
 	if err != nil {
@@ -82,7 +153,6 @@ func (receiver *ExtractJobRepository) GetForUpdate(ctx context.Context, tx pgx.T
 	return job, nil
 }
 
-func (receiver ExtractJobRepository) Save(ctx context.Context, tx pgx.Tx, job *models.ExtractJob) error {
-	job.UpdatedAt = time.Now()
+func (repository *ExtractJobRepository) save(ctx context.Context, tx pgx.Tx, job *models.ExtractJob) error {
 	return tx.QueryRow(ctx, "UPDATE extract_jobs SET status=$1 status_message=$2 message=$3 updated_at=$4 WHERE id=$4", job.Status, job.StatusMessage, job.Message, job.UpdatedAt).Scan()
 }

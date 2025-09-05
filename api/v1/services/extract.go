@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"steg/api/v1/models"
 	"steg/api/v1/repository"
@@ -52,19 +53,19 @@ func (service *ExtractJobService) Start(ctx context.Context, job *models.Extract
 		return job, err
 	}
 	// Get's a lock on the row to check if in progress
-	job, err = service.CheckAndMarkInProgress(ctx, job)
+	updatedJob, err := service.JobRepository.CheckAndMarkInProgress(ctx, job)
 	if err != nil {
-		return job, err
+		return updatedJob, err
 	}
 	go func() {
 		ctx := context.Background()
 		err := service.StartExtractMessage(ctx, job, image)
 		if err != nil {
-			// TODO What to do with this? Don't want orphaned in progress images
-			service.MarkFailed(ctx, job, err)
+			err = service.JobRepository.MarkFailed(ctx, job, err)
+			fmt.Println("Error marking job as failed", err)
 		}
 	}()
-	return job, nil
+	return updatedJob, nil
 }
 
 func (service *ExtractJobService) StartExtractMessage(ctx context.Context, job *models.ExtractJob, image *models.Image) error {
@@ -72,27 +73,7 @@ func (service *ExtractJobService) StartExtractMessage(ctx context.Context, job *
 	if err != nil {
 		return err
 	}
-	tx, err := service.JobRepository.StartTransaction(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(ctx)
-	jobForUpdate, err := service.JobRepository.GetForUpdate(ctx, tx, job.Uuid)
-	if err != nil {
-		return err
-	}
-	jobForUpdate.Message = message
-	jobForUpdate.Status = models.Complete
-	jobForUpdate.StatusMessage = "Completed"
-	err = service.JobRepository.Save(ctx, tx, jobForUpdate)
-	if err != nil {
-		return err
-	}
-	err = tx.Commit(ctx)
-	if err != nil {
-		return err
-	}
-	return nil
+	return service.JobRepository.Complete(ctx, job, message)
 }
 
 func (service *ExtractJobService) ExtractMessage(image *models.Image) (string, error) {
@@ -105,56 +86,4 @@ func (service *ExtractJobService) ExtractMessage(image *models.Image) (string, e
 
 	// TODO Decode the steg
 	return "Temporary Extract Message", nil
-}
-
-func (service *ExtractJobService) MarkFailed(ctx context.Context, job *models.ExtractJob, givenError error) (*models.ExtractJob, error) {
-	// Mark it failed
-	tx, err := service.JobRepository.StartTransaction(ctx)
-	if err != nil {
-		return job, err
-	}
-	defer tx.Rollback(ctx)
-	jobForUpdate, err := service.JobRepository.GetForUpdate(ctx, tx, job.Uuid)
-	if err != nil {
-		return job, err
-	}
-	jobForUpdate.Status = models.Error
-	jobForUpdate.StatusMessage = givenError.Error()
-	err = service.JobRepository.Save(ctx, tx, jobForUpdate)
-	if err != nil {
-		return job, err
-	}
-	err = tx.Commit(ctx)
-	if err != nil {
-		return job, err
-	}
-	return jobForUpdate, nil
-}
-
-func (service *ExtractJobService) CheckAndMarkInProgress(ctx context.Context, job *models.ExtractJob) (*models.ExtractJob, error) {
-	tx, err := service.JobRepository.StartTransaction(ctx)
-	if err != nil {
-		return job, err
-	}
-	defer tx.Rollback(ctx)
-	jobForUpdate, err := service.JobRepository.GetForUpdate(ctx, tx, job.Uuid)
-	if err != nil {
-		return job, err
-	}
-	// Another job already claimed it
-	// TODO Handle if it is completed already, but allow retries with cancelled or error
-	if jobForUpdate.Status == models.InProgress {
-		return job, AlreadyInProgress
-	}
-	jobForUpdate.Status = models.InProgress
-	jobForUpdate.StatusMessage = "In Progress"
-	err = service.JobRepository.Save(ctx, tx, jobForUpdate)
-	if err != nil {
-		return job, err
-	}
-	err = tx.Commit(ctx)
-	if err != nil {
-		return job, err
-	}
-	return jobForUpdate, nil
 }
