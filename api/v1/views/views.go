@@ -41,7 +41,7 @@ func ConfigureViews(dbPool *pgxpool.Pool) http.Handler {
 	mux.Handle("/api/v1/embed/{id}", http.StripPrefix("/api/v1/", embedJobHandler))
 
 	// POST to trigger the processing
-	embedStartHandler := handlers.NewJobStartHandler(embedJobService)
+	embedStartHandler := handlers.NewJobStartHandler[models.EmbedJob](embedJobService)
 	mux.Handle("POST /api/v1/embed/{id}/start", http.StripPrefix("/api/v1/", embedStartHandler))
 
 	extractCrud := handlers.NewExtractJobCrud(extractJobService)
@@ -54,7 +54,7 @@ func ConfigureViews(dbPool *pgxpool.Pool) http.Handler {
 	mux.Handle("/api/v1/extract/{id}", http.StripPrefix("/api/v1/", extractJobHandler))
 
 	// POST to trigger the processing
-	extractStartHandler := handlers.NewJobStartHandler(extractJobService)
+	extractStartHandler := handlers.NewJobStartHandler[models.ExtractJob](extractJobService)
 	mux.Handle("POST /api/v1/extract/{id}/start", http.StripPrefix("/api/v1/", extractStartHandler))
 
 	// V1 stats
