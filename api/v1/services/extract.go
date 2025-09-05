@@ -76,9 +76,9 @@ func (service *ExtractJobService) StartExtractMessage(ctx context.Context, job *
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback(ctx)
 	jobForUpdate, err := service.JobRepository.GetForUpdate(ctx, tx, job.Uuid)
 	if err != nil {
-		tx.Rollback(ctx)
 		return err
 	}
 	jobForUpdate.Message = message
@@ -86,7 +86,6 @@ func (service *ExtractJobService) StartExtractMessage(ctx context.Context, job *
 	jobForUpdate.StatusMessage = "Completed"
 	err = service.JobRepository.Save(ctx, tx, jobForUpdate)
 	if err != nil {
-		tx.Rollback(ctx)
 		return err
 	}
 	err = tx.Commit(ctx)
@@ -114,6 +113,7 @@ func (service *ExtractJobService) MarkFailed(ctx context.Context, job *models.Ex
 	if err != nil {
 		return job, err
 	}
+	defer tx.Rollback(ctx)
 	jobForUpdate, err := service.JobRepository.GetForUpdate(ctx, tx, job.Uuid)
 	if err != nil {
 		return job, err
@@ -122,7 +122,6 @@ func (service *ExtractJobService) MarkFailed(ctx context.Context, job *models.Ex
 	jobForUpdate.StatusMessage = givenError.Error()
 	err = service.JobRepository.Save(ctx, tx, jobForUpdate)
 	if err != nil {
-		tx.Rollback(ctx)
 		return job, err
 	}
 	err = tx.Commit(ctx)
@@ -137,21 +136,20 @@ func (service *ExtractJobService) CheckAndMarkInProgress(ctx context.Context, jo
 	if err != nil {
 		return job, err
 	}
+	defer tx.Rollback(ctx)
 	jobForUpdate, err := service.JobRepository.GetForUpdate(ctx, tx, job.Uuid)
 	if err != nil {
 		return job, err
 	}
 	// Another job already claimed it
 	// TODO Handle if it is completed already, but allow retries with cancelled or error
-	if jobForUpdate.Status != models.InProgress {
-		tx.Rollback(ctx)
+	if jobForUpdate.Status == models.InProgress {
 		return job, AlreadyInProgress
 	}
 	jobForUpdate.Status = models.InProgress
 	jobForUpdate.StatusMessage = "In Progress"
 	err = service.JobRepository.Save(ctx, tx, jobForUpdate)
 	if err != nil {
-		tx.Rollback(ctx)
 		return job, err
 	}
 	err = tx.Commit(ctx)
