@@ -1,11 +1,13 @@
 package crud
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
 	"io"
 	"net/http"
+
+	"github.com/google/uuid"
 )
 
 func writeJSON(w http.ResponseWriter, status int, data interface{}) error {
@@ -15,23 +17,23 @@ func writeJSON(w http.ResponseWriter, status int, data interface{}) error {
 }
 
 type Creator[T any] interface {
-	Create(io.Reader) (T, error) // POST
+	Create(ctx context.Context, reader io.Reader) (T, error) // POST
 }
 
 type Reader[T any] interface {
-	Read(uuid.UUID) (T, bool, error) // GET
+	Read(ctx context.Context, id uuid.UUID) (T, bool, error) // GET
 }
 
 type Updater[T any] interface {
-	Update(id uuid.UUID, reader io.Reader) (T, bool, error) // PUT
+	Update(ctx context.Context, id uuid.UUID, reader io.Reader) (T, bool, error) // PUT
 }
 
 type Deleter[T any] interface {
-	Delete(uuid.UUID) (bool, error) // DELETE
+	Delete(ctx context.Context, id uuid.UUID) (bool, error) // DELETE
 }
 
 type Lister[T any] interface {
-	List() ([]T, error)
+	List(ctx context.Context) ([]T, error)
 }
 
 type BaseCrud[T any] interface {
@@ -67,7 +69,7 @@ func (h *ListHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ListHandler[T]) PostHandler(w http.ResponseWriter, r *http.Request, creator Creator[T]) {
-	resource, err := creator.Create(r.Body)
+	resource, err := creator.Create(r.Context(), r.Body)
 	if err != nil {
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		return
@@ -81,7 +83,7 @@ func (h *ListHandler[T]) PostHandler(w http.ResponseWriter, r *http.Request, cre
 }
 
 func (h *ListHandler[T]) GetHandler(w http.ResponseWriter, r *http.Request, lister Lister[T]) {
-	resources, err := lister.List()
+	resources, err := lister.List(r.Context())
 	if err != nil {
 		http.Error(w, "400 Bad Request", http.StatusBadRequest)
 		return
@@ -104,7 +106,7 @@ func NewItemHandler[T any](crud BaseCrud[T]) *ItemHandler[T] {
 
 func (h *ItemHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
-	// TODO List and options
+	// TODO options
 	case http.MethodGet:
 		if reader, ok := any(h).(Reader[T]); ok {
 			h.GetHandler(w, r, reader)
@@ -134,7 +136,7 @@ func (h *ItemHandler[T]) GetHandler(w http.ResponseWriter, r *http.Request, read
 	if err != nil {
 		http.Error(w, "400 Bad Request", http.StatusBadRequest)
 	}
-	resource, found, err := reader.Read(resourceId)
+	resource, found, err := reader.Read(r.Context(), resourceId)
 	if err != nil {
 		http.Error(w, "400 Bad Request", http.StatusBadRequest)
 		return
@@ -158,7 +160,7 @@ func (h *ItemHandler[T]) PutHandler(w http.ResponseWriter, r *http.Request, upda
 		http.Error(w, "400 Bad Request", http.StatusBadRequest)
 	}
 
-	resource, found, err := updater.Update(resourceUUID, r.Body)
+	resource, found, err := updater.Update(r.Context(), resourceUUID, r.Body)
 	if err != nil {
 		http.Error(w, "400 Bad Request", http.StatusBadRequest)
 		return
@@ -181,7 +183,7 @@ func (h *ItemHandler[T]) DeleteHandler(w http.ResponseWriter, r *http.Request, d
 		http.Error(w, "400 Bad Request", http.StatusBadRequest)
 	}
 
-	found, err := deleter.Delete(resourceUUID)
+	found, err := deleter.Delete(r.Context(), resourceUUID)
 	if err != nil {
 		http.Error(w, "400 Bad Request", http.StatusBadRequest)
 		return

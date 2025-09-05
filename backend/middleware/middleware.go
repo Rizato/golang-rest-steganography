@@ -16,9 +16,8 @@ func (m MiddlewareFunc) Wrap(next http.Handler) http.Handler {
 	return m(next)
 }
 
-func ConfigureMiddleware(mux http.Handler, stats *Stats) http.Handler {
+func ConfigureMiddleware(mux http.Handler) http.Handler {
 	server := mux
 	server = LoggerMiddleware(server)
-	server = NewStatsMiddleware(stats).Wrap(server)
 	return server
 }

@@ -1,19 +1,26 @@
 package main
 
 import (
+	"context"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"steg/api/v1/views"
 	"steg/middleware"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
-
 	log.Printf("Listening on port 8080")
-	stats := middleware.NewStats()
+	// connect to db
+	dbPool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+	if err != nil {
+		log.Fatal(err)
+	}
 	// v1 mux
-	apiV1 := views.ConfigureViews(stats)
+	apiV1 := views.ConfigureViews(dbPool)
 
 	mux := http.NewServeMux()
 	mux.Handle("/api/v1/", apiV1)
@@ -22,6 +29,6 @@ func main() {
 	})
 
 	// add middleware
-	handler := middleware.ConfigureMiddleware(mux, stats)
+	handler := middleware.ConfigureMiddleware(mux)
 	log.Fatal(http.ListenAndServe(":8080", handler))
 }

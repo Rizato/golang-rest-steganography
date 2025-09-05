@@ -1,33 +1,25 @@
 package models
 
 import (
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 )
 
-type Model interface {
-	GetSchema() interface{}
+type Image struct {
+	Uuid      uuid.UUID `json:"uuid"`
+	Path      string    `json:"-"`
+	Size      int64     `json:"size"`
+	Mimetype  string    `json:"mime"`
+	Encoded   bool      `json:"encoded"`
+	CreatedAt time.Time `json:"created-at"`
+	UpdatedAt time.Time `json:"updated-at"`
 }
 
-type ServerFile struct {
-	Uuid     uuid.UUID `json:"uuid"`
-	Path     string    `json:"-"`
-	Size     int64     `json:"size"`
-	Mimetype string    `json:"mime"`
-}
-
-func NewServerFile() ServerFile {
-	return ServerFile{
+func NewImage() Image {
+	return Image{
 		Uuid: uuid.New(),
 	}
-}
-
-func (i ServerFile) GetSchema() interface{} {
-	return nil
-}
-
-type Job interface {
-	Start()
 }
 
 type Status string
@@ -41,9 +33,10 @@ const (
 )
 
 type EmbedJob struct {
-	Uuid              uuid.UUID  `json:"uuid"`
-	Status            Status     `json:"status"`
-	StatusMessage     string     `json:"status-message"`
+	Uuid          uuid.UUID `json:"uuid"`
+	Status        Status    `json:"status"`
+	StatusMessage string    `json:"status-message"`
+	// TODO Separate models per layer, for nested objects
 	ImageUUID         uuid.UUID  `json:"image-uuid"`
 	Message           string     `json:"message"`
 	EmbeddedImageUUID *uuid.UUID `json:"embedded-image-uuid"`
@@ -51,7 +44,7 @@ type EmbedJob struct {
 	UpdatedAt         time.Time  `json:"updated-at"`
 }
 
-func NewEmbedJob(image ServerFile) EmbedJob {
+func NewEmbedJob(image Image) EmbedJob {
 	return EmbedJob{
 		Uuid:              uuid.New(),
 		Status:            Submitted,
@@ -61,17 +54,6 @@ func NewEmbedJob(image ServerFile) EmbedJob {
 		CreatedAt:         time.Now(),
 		UpdatedAt:         time.Now(),
 	}
-}
-
-func (j EmbedJob) GetSchema() interface{} {
-	return nil
-}
-
-func (j EmbedJob) Start() {
-	// Download file
-	j.Status = InProgress
-	// Add steg
-	// Update state
 }
 
 type ExtractJob struct {
@@ -84,7 +66,7 @@ type ExtractJob struct {
 	UpdatedAt     time.Time `json:"updated-at"`
 }
 
-func NewExtractJob(image ServerFile) ExtractJob {
+func NewExtractJob(image Image) ExtractJob {
 	return ExtractJob{
 		Uuid:          uuid.New(),
 		Status:        Submitted,
@@ -94,15 +76,4 @@ func NewExtractJob(image ServerFile) ExtractJob {
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
 	}
-}
-
-func (j ExtractJob) GetSchema() interface{} {
-	return nil
-}
-
-func (j ExtractJob) Start() {
-	// Download file
-	j.Status = InProgress
-	// Check for steg
-	// Update state
 }
