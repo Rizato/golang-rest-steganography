@@ -1,7 +1,8 @@
-package handlers
+package models
 
 import (
 	"errors"
+
 	"github.com/google/uuid"
 )
 
@@ -19,6 +20,7 @@ func ValidateMessage(message string) error {
 		return MissingMessageError
 	}
 
+	// todo make a little config for this
 	if len(message) > 1000 {
 		return MessageTooLargeError
 	}

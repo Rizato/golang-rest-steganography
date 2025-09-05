@@ -33,9 +33,10 @@ const (
 )
 
 type EmbedJob struct {
-	Uuid              uuid.UUID  `json:"uuid"`
-	Status            Status     `json:"status"`
-	StatusMessage     string     `json:"status-message"`
+	Uuid          uuid.UUID `json:"uuid"`
+	Status        Status    `json:"status"`
+	StatusMessage string    `json:"status-message"`
+	// TODO Separate models per layer, for nested objects
 	ImageUUID         uuid.UUID  `json:"image-uuid"`
 	Message           string     `json:"message"`
 	EmbeddedImageUUID *uuid.UUID `json:"embedded-image-uuid"`

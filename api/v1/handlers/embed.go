@@ -21,7 +21,7 @@ func NewEmbedJobCrud(service *services.EmbedJobService) *EmbedJobCrud {
 }
 
 func (h *EmbedJobCrud) Create(ctx context.Context, reader io.Reader) (*models.EmbedJob, error) {
-	var embedRequest CreateEmbedRequest
+	var embedRequest models.CreateEmbedRequest
 	err := json.NewDecoder(reader).Decode(&embedRequest)
 	if err != nil {
 		return nil, err

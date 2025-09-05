@@ -21,7 +21,7 @@ func NewExtractJobCrud(service *services.ExtractJobService) *ExtractJobCrud {
 }
 
 func (h *ExtractJobCrud) Create(ctx context.Context, reader io.Reader) (*models.ExtractJob, error) {
-	var extractRequest CreateExtractRequest
+	var extractRequest models.CreateExtractRequest
 	err := json.NewDecoder(reader).Decode(&extractRequest)
 	if err != nil {
 		return nil, err
