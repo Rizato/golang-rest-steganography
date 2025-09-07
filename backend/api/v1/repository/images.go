@@ -17,7 +17,7 @@ func NewImageRepository(dbPool *pgxpool.Pool) *ImageRepository {
 }
 
 func (receiver *ImageRepository) List(context context.Context) ([]*models.Image, error) {
-	rows, err := receiver.dbPool.Query(context, "SELECT uuid, path, mimetype, size, encoded, created_at, updated_at size FROM images")
+	rows, err := receiver.dbPool.Query(context, "SELECT id, path, mimetype, size, encoded, created_at, updated_at size FROM images")
 	if err != nil {
 		return nil, err
 	}
@@ -40,22 +40,22 @@ func (receiver *ImageRepository) List(context context.Context) ([]*models.Image,
 }
 
 func (receiver *ImageRepository) GetByID(context context.Context, uuid uuid.UUID) (*models.Image, error) {
-	var image *models.Image
-	err := receiver.dbPool.QueryRow(context, "SELECT uuid, path, mimetype, size,  encoded, created_at, updated_at FROM images WHERE uuid = $1", uuid.String()).Scan(&image.Path, &image.Mimetype, &image.Size, &image.Encoded, &image.CreatedAt, &image.UpdatedAt)
+	var image models.Image
+	err := receiver.dbPool.QueryRow(context, "SELECT id, path, mimetype, size, encoded, created_at, updated_at FROM images WHERE id = $1", uuid.String()).Scan(&image.Uuid, &image.Path, &image.Mimetype, &image.Size, &image.Encoded, &image.CreatedAt, &image.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
 
-	return image, nil
+	return &image, nil
 }
 
 func (receiver *ImageRepository) Create(context context.Context, path string, mimetype string, size int64, encoded bool) (*models.Image, error) {
-	var image models.Image
-	err := receiver.dbPool.QueryRow(context, "INSERT INTO images (path, mimetype, size, encoded) VALUES ($1, $2, $3, $4) RETURNING (id, path, mimetype, size, encoding, create_at, updated_at)", path, mimetype, size, encoded).Scan(&image.Uuid, &image.Path, &image.Mimetype, &image.Size, &image.Encoded, &image.CreatedAt, &image.UpdatedAt)
+	var id uuid.UUID
+	err := receiver.dbPool.QueryRow(context, "INSERT INTO images (path, mimetype, size, encoded) VALUES ($1, $2, $3, $4) RETURNING id", path, mimetype, size, encoded).Scan(&id)
 	if err != nil {
 		return nil, err
 	}
-	return &image, nil
+	return receiver.GetByID(context, id)
 }
 
 func (receiver *ImageRepository) Delete(context context.Context, uuid uuid.UUID) error {

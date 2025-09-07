@@ -23,6 +23,7 @@ func NewJobStartHandler[T any](service services.JobService[T]) *JobStartHandler[
 func (handler *JobStartHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if (*r).Method != http.MethodPost {
 		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
+		return
 	}
 	jobId := r.PathValue("id")
 	jobUUID, err := uuid.Parse(jobId)
@@ -40,6 +41,7 @@ func (handler *JobStartHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Requ
 	job, err = handler.service.Start(r.Context(), job)
 	if err != nil && !errors.Is(err, repository.AlreadyInProgress) {
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusAccepted)

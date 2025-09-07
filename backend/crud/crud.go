@@ -51,13 +51,13 @@ func (h *ListHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	// TODO Handle Options
 	case http.MethodPost:
-		if creator, ok := any(h).(Creator[T]); ok {
+		if creator, ok := any(h.service).(Creator[T]); ok {
 			h.PostHandler(w, r, creator)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	case http.MethodGet:
-		if lister, ok := any(h).(Lister[T]); ok {
+		if lister, ok := any(h.service).(Lister[T]); ok {
 			h.GetHandler(w, r, lister)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -108,19 +108,19 @@ func (h *ItemHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	// TODO options
 	case http.MethodGet:
-		if reader, ok := any(h).(Reader[T]); ok {
+		if reader, ok := any(h.service).(Reader[T]); ok {
 			h.GetHandler(w, r, reader)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	case http.MethodPut:
-		if updater, ok := any(h).(Updater[T]); ok {
+		if updater, ok := any(h.service).(Updater[T]); ok {
 			h.PutHandler(w, r, updater)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	case http.MethodDelete:
-		if deleter, ok := any(h).(Deleter[T]); ok {
+		if deleter, ok := any(h.service).(Deleter[T]); ok {
 			h.DeleteHandler(w, r, deleter)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
