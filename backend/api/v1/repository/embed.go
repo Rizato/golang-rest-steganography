@@ -18,9 +18,9 @@ func NewEmbedJobRepository(dbPool *pgxpool.Pool) *EmbedJobRepository {
 	return &EmbedJobRepository{dbPool}
 }
 
-func (repository *EmbedJobRepository) Create(ctx context.Context, image_uuid uuid.UUID) (*models.EmbedJob, error) {
+func (repository *EmbedJobRepository) Create(ctx context.Context, image_uuid uuid.UUID, message string) (*models.EmbedJob, error) {
 	var createdId uuid.UUID
-	err := repository.dbPool.QueryRow(ctx, "INSERT INTO embed_jobs (image_uuid) VALUES ($1) RETURNING id", image_uuid).Scan(&createdId)
+	err := repository.dbPool.QueryRow(ctx, "INSERT INTO embed_jobs (image_uuid, message) VALUES ($1, $2) RETURNING id", image_uuid, message).Scan(&createdId)
 	if err != nil {
 		return nil, err
 	}
@@ -51,13 +51,13 @@ func (repository *EmbedJobRepository) List(ctx context.Context) ([]*models.Embed
 }
 
 func (repository *EmbedJobRepository) GetByID(ctx context.Context, uuid uuid.UUID) (*models.EmbedJob, error) {
-	var job *models.EmbedJob
+	var job models.EmbedJob
 	err := repository.dbPool.QueryRow(ctx, "SELECT id, status, status_message, image_uuid, message, created_at, updated_at FROM embed_jobs WHERE id = $1", uuid.String()).Scan(&job.Uuid, &job.Status, &job.StatusMessage, &job.ImageUUID, &job.Message, &job.CreatedAt, &job.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
 
-	return job, nil
+	return &job, nil
 }
 
 func (repository *EmbedJobRepository) Delete(ctx context.Context, uuid uuid.UUID) error {
@@ -144,13 +144,13 @@ func (repository *EmbedJobRepository) CheckAndMarkInProgress(ctx context.Context
 }
 
 func (repository *EmbedJobRepository) getForUpdate(ctx context.Context, tx pgx.Tx, uuid uuid.UUID) (*models.EmbedJob, error) {
-	var job *models.EmbedJob
+	var job models.EmbedJob
 	err := tx.QueryRow(ctx, "SELECT id, status, status_message, image_uuid, message, created_at, updated_at FROM embed_jobs WHERE id = $1 FOR UPDATE", uuid.String()).Scan(&job.Uuid, &job.Status, &job.StatusMessage, &job.ImageUUID, &job.Message, &job.CreatedAt, &job.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
 
-	return job, nil
+	return &job, nil
 }
 
 func (repository *EmbedJobRepository) save(ctx context.Context, tx pgx.Tx, job *models.EmbedJob) error {

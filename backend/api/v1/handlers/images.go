@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"steg/api/v1/models"
@@ -80,12 +81,14 @@ func HandleUpload(service *services.ImageService) http.Handler {
 		file, err := os.CreateTemp("", "image")
 		if err != nil {
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+			log.Println("Failed to create temporary file", err)
 			return
 		}
 		defer file.Close()
 		fileSize, err := io.Copy(file, limited)
 		if err != nil {
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+			log.Println("Failed to write temporary file", err)
 			return
 		}
 
@@ -99,12 +102,14 @@ func HandleUpload(service *services.ImageService) http.Handler {
 		_, err = file.Seek(0, 0)
 		if err != nil {
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+			log.Println("Error while seeking", err)
 			return
 		}
 
 		mimetype, err := files.GetMimetype(file)
 		if err != nil {
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+			log.Println("Error while determining mimetype", err)
 			return
 		}
 
@@ -118,6 +123,7 @@ func HandleUpload(service *services.ImageService) http.Handler {
 		image, err := service.AddImage(r.Context(), file.Name(), mimetype, fileSize, false)
 		if err != nil {
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+			log.Println("Failed to add image", err)
 			return
 		}
 
@@ -147,6 +153,7 @@ func HandleDownload(service *services.ImageService) http.Handler {
 		}
 		if err != nil {
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+			log.Println("Failed to get image", err)
 			return
 		}
 
@@ -154,6 +161,7 @@ func HandleDownload(service *services.ImageService) http.Handler {
 		f, err := os.Open(image.Path)
 		if err != nil {
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+			log.Println("Failed to open file", err)
 			return
 		}
 		defer f.Close()

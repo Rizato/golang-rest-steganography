@@ -34,7 +34,7 @@ func (handler *JobStartHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Requ
 
 	// Kicks off the job
 	job, err := handler.service.GetJob(r.Context(), jobUUID)
-	if job == nil || errors.Is(err, sql.ErrNoRows) {
+	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "404 Not Found", http.StatusNotFound)
 		return
 	}

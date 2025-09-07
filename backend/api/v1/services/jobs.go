@@ -7,6 +7,6 @@ import (
 )
 
 type JobService[T any] interface {
-	GetJob(ctx context.Context, uuid uuid.UUID) (*T, error)
-	Start(ctx context.Context, job *T) (*T, error)
+	GetJob(ctx context.Context, uuid uuid.UUID) (T, error)
+	Start(ctx context.Context, job T) (T, error)
 }

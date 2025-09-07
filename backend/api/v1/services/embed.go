@@ -22,13 +22,13 @@ func NewEmbedJobService(jobRepository *repository2.EmbedJobRepository, imageRepo
 	}
 }
 
-func (service *EmbedJobService) CreateJob(ctx context.Context, image_uuid uuid.UUID) (*models.EmbedJob, error) {
+func (service *EmbedJobService) CreateJob(ctx context.Context, image_uuid uuid.UUID, message string) (*models.EmbedJob, error) {
 	// Get image to check
 	_, err := service.ImageRepository.GetByID(ctx, image_uuid)
 	if err != nil {
 		return nil, err
 	}
-	return service.JobRepository.Create(ctx, image_uuid)
+	return service.JobRepository.Create(ctx, image_uuid, message)
 }
 
 func (service *EmbedJobService) ListJobs(ctx context.Context) ([]*models.EmbedJob, error) {
