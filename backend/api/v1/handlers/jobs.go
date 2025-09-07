@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"steg/api/v1/repository"
 	"steg/api/v1/services"
@@ -38,9 +39,15 @@ func (handler *JobStartHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Requ
 		http.Error(w, "404 Not Found", http.StatusNotFound)
 		return
 	}
+	if err != nil {
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		log.Println("Error Finding job", err)
+		return
+	}
 	job, err = handler.service.Start(r.Context(), job)
 	if err != nil && !errors.Is(err, repository.AlreadyInProgress) {
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		log.Println("Error starting job:", err)
 		return
 	}
 
