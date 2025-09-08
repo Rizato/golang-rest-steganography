@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"steg/api/v1/models"
 	"time"
 
@@ -51,13 +52,13 @@ func (repository *ExtractJobRepository) List(ctx context.Context) ([]*models.Ext
 }
 
 func (repository *ExtractJobRepository) GetByID(ctx context.Context, uuid uuid.UUID) (*models.ExtractJob, error) {
-	var job *models.ExtractJob
+	var job models.ExtractJob
 	err := repository.dbPool.QueryRow(ctx, "SELECT id, status, status_message, image_uuid, message, created_at, updated_at FROM extract_jobs WHERE id = $1", uuid.String()).Scan(&job.Uuid, &job.Status, &job.StatusMessage, &job.ImageUUID, &job.Message, &job.CreatedAt, &job.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
 
-	return job, nil
+	return &job, nil
 }
 
 func (repository *ExtractJobRepository) Delete(ctx context.Context, uuid uuid.UUID) error {
@@ -76,7 +77,7 @@ func (repository *ExtractJobRepository) Complete(ctx context.Context, job *model
 	}
 	jobForUpdate.Status = models.Complete
 	jobForUpdate.StatusMessage = "Completed"
-	jobForUpdate.Message = message
+	jobForUpdate.Message = &message
 	jobForUpdate.UpdatedAt = time.Now()
 	err = repository.save(ctx, tx, jobForUpdate)
 	if err != nil {
@@ -144,15 +145,19 @@ func (repository *ExtractJobRepository) CheckAndMarkInProgress(ctx context.Conte
 }
 
 func (repository *ExtractJobRepository) getForUpdate(ctx context.Context, tx pgx.Tx, uuid uuid.UUID) (*models.ExtractJob, error) {
-	var job *models.ExtractJob
-	err := tx.QueryRow(ctx, "SELECT id, status, status_message, image_uuid, message, created_at, updated_at FROM extract_jobs WHERE id = $1 FOR UPDATE", uuid.String()).Scan(&job.Uuid, &job.Status, &job.StatusMessage, &job.ImageUUID, &job.Message, &job.CreatedAt, &job.UpdatedAt)
+	var job models.ExtractJob
+	err := tx.QueryRow(ctx, "SELECT id, status, status_message, image_uuid, message, created_at, updated_at FROM extract_jobs WHERE id = $1 FOR UPDATE", uuid).Scan(&job.Uuid, &job.Status, &job.StatusMessage, &job.ImageUUID, &job.Message, &job.CreatedAt, &job.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
 
-	return job, nil
+	return &job, nil
 }
 
 func (repository *ExtractJobRepository) save(ctx context.Context, tx pgx.Tx, job *models.ExtractJob) error {
-	return tx.QueryRow(ctx, "UPDATE extract_jobs SET status=$1 status_message=$2 message=$3 updated_at=$4 WHERE id=$4", job.Status, job.StatusMessage, job.Message, job.UpdatedAt).Scan()
+	result, err := tx.Exec(ctx, "UPDATE extract_jobs SET status = $1, status_message = $2, message = $3, updated_at = $4 WHERE id = $5", job.Status, job.StatusMessage, job.Message, job.UpdatedAt, job.Uuid)
+	if result.RowsAffected() != 1 {
+		return sql.ErrNoRows
+	}
+	return err
 }

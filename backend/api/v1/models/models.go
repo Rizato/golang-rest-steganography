@@ -37,22 +37,22 @@ type EmbedJob struct {
 	Status        Status    `json:"status"`
 	StatusMessage string    `json:"status-message"`
 	// TODO Separate models per layer, for nested objects
-	ImageUUID         uuid.UUID  `json:"image-uuid"`
-	Message           string     `json:"message"`
-	EmbeddedImageUUID *uuid.UUID `json:"embedded-image-uuid"`
-	CreatedAt         time.Time  `json:"created-at"`
-	UpdatedAt         time.Time  `json:"updated-at"`
+	ImageUuid    uuid.UUID  `json:"image-uuid"`
+	Message      string     `json:"message"`
+	EmbeddedUuid *uuid.UUID `json:"embedded-uuid"`
+	CreatedAt    time.Time  `json:"created-at"`
+	UpdatedAt    time.Time  `json:"updated-at"`
 }
 
 func NewEmbedJob(image Image) EmbedJob {
 	return EmbedJob{
-		Uuid:              uuid.New(),
-		Status:            Submitted,
-		StatusMessage:     "",
-		ImageUUID:         image.Uuid,
-		EmbeddedImageUUID: nil,
-		CreatedAt:         time.Now(),
-		UpdatedAt:         time.Now(),
+		Uuid:          uuid.New(),
+		Status:        Submitted,
+		StatusMessage: "",
+		ImageUuid:     image.Uuid,
+		EmbeddedUuid:  nil,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
 }
 
@@ -61,7 +61,7 @@ type ExtractJob struct {
 	Status        Status    `json:"status"`
 	StatusMessage string    `json:"status-message"`
 	ImageUUID     uuid.UUID `json:"image-uuid"`
-	Message       string    `json:"message"`
+	Message       *string   `json:"message"`
 	CreatedAt     time.Time `json:"created-at"`
 	UpdatedAt     time.Time `json:"updated-at"`
 }
@@ -72,7 +72,7 @@ func NewExtractJob(image Image) ExtractJob {
 		Status:        Submitted,
 		StatusMessage: "",
 		ImageUUID:     image.Uuid,
-		Message:       "",
+		Message:       nil,
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
 	}

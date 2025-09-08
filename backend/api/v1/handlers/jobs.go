@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"steg/api/v1/repository"
 	"steg/api/v1/services"
@@ -23,6 +24,7 @@ func NewJobStartHandler[T any](service services.JobService[T]) *JobStartHandler[
 func (handler *JobStartHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if (*r).Method != http.MethodPost {
 		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
+		return
 	}
 	jobId := r.PathValue("id")
 	jobUUID, err := uuid.Parse(jobId)
@@ -33,13 +35,20 @@ func (handler *JobStartHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Requ
 
 	// Kicks off the job
 	job, err := handler.service.GetJob(r.Context(), jobUUID)
-	if job == nil || errors.Is(err, sql.ErrNoRows) {
+	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "404 Not Found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		log.Println("Error Finding job", err)
 		return
 	}
 	job, err = handler.service.Start(r.Context(), job)
 	if err != nil && !errors.Is(err, repository.AlreadyInProgress) {
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		log.Println("Error starting job:", err)
+		return
 	}
 
 	w.WriteHeader(http.StatusAccepted)

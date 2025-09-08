@@ -18,6 +18,7 @@ func (m MiddlewareFunc) Wrap(next http.Handler) http.Handler {
 
 func ConfigureMiddleware(mux http.Handler) http.Handler {
 	server := mux
+	server = CorsMiddleware(server)
 	server = LoggerMiddleware(server)
 	return server
 }

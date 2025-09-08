@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"steg/api/v1/models"
@@ -47,12 +48,14 @@ func HandleUpload(service *services.ImageService) http.Handler {
 		err := r.ParseMultipartForm(32 << 20)
 		if err != nil {
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+			return
 		}
 
 		// Get the uploaded from the form
 		uploaded, uploadedHeader, err := r.FormFile("file")
 		if err != nil {
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+			return
 		}
 		defer uploaded.Close()
 
@@ -65,49 +68,63 @@ func HandleUpload(service *services.ImageService) http.Handler {
 		if err != nil {
 			if errors.Is(err, files.FileTooLargeError) {
 				http.Error(w, "413 Content Too Large", http.StatusRequestEntityTooLarge)
+				return
 			}
 
 			if errors.Is(err, files.InvalidMimetype) {
 				http.Error(w, "400 Bad Request", http.StatusBadRequest)
+				return
 			}
 		}
 
 		// Write to a temporary file
-		file, err := os.CreateTemp("images", "image")
+		file, err := os.CreateTemp("", "image")
 		if err != nil {
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+			log.Println("Failed to create temporary file", err)
+			return
 		}
 		defer file.Close()
 		fileSize, err := io.Copy(file, limited)
 		if err != nil {
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+			log.Println("Failed to write temporary file", err)
+			return
 		}
 
 		// Don't trust client supplied size
 		if fileSize > maxSize {
 			http.Error(w, "413 File too large", http.StatusRequestEntityTooLarge)
+			return
 		}
 
 		// Don't trust user supplied mimetype
 		_, err = file.Seek(0, 0)
 		if err != nil {
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+			log.Println("Error while seeking", err)
+			return
 		}
 
 		mimetype, err := files.GetMimetype(file)
 		if err != nil {
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+			log.Println("Error while determining mimetype", err)
+			return
 		}
 
 		err = files.ValidateMimetype(mimetype)
 		if err != nil {
 			http.Error(w, "400 Bad Request", http.StatusBadRequest)
+			return
 		}
 
 		// Add file to the database
 		image, err := service.AddImage(r.Context(), file.Name(), mimetype, fileSize, false)
 		if err != nil {
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+			log.Println("Failed to add image", err)
+			return
 		}
 
 		w.WriteHeader(http.StatusCreated)
@@ -126,20 +143,26 @@ func HandleDownload(service *services.ImageService) http.Handler {
 		fileUUID, err := uuid.Parse(fileId)
 		if err != nil {
 			http.Error(w, "400 Bad Request", http.StatusBadRequest)
+			return
 		}
 
 		image, err := service.GetImage(r.Context(), fileUUID)
 		if errors.Is(err, NotFoundError) {
 			http.Error(w, "404 Not Found", http.StatusNotFound)
+			return
 		}
 		if err != nil {
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+			log.Println("Failed to get image", err)
+			return
 		}
 
 		// Open file
 		f, err := os.Open(image.Path)
 		if err != nil {
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+			log.Println("Failed to open file", err)
+			return
 		}
 		defer f.Close()
 

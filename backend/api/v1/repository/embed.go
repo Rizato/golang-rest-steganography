@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"log"
 	"steg/api/v1/models"
 	"time"
 
@@ -18,9 +20,9 @@ func NewEmbedJobRepository(dbPool *pgxpool.Pool) *EmbedJobRepository {
 	return &EmbedJobRepository{dbPool}
 }
 
-func (repository *EmbedJobRepository) Create(ctx context.Context, image_uuid uuid.UUID) (*models.EmbedJob, error) {
+func (repository *EmbedJobRepository) Create(ctx context.Context, image_uuid uuid.UUID, message string) (*models.EmbedJob, error) {
 	var createdId uuid.UUID
-	err := repository.dbPool.QueryRow(ctx, "INSERT INTO embed_jobs (image_uuid) VALUES ($1) RETURNING id", image_uuid).Scan(&createdId)
+	err := repository.dbPool.QueryRow(ctx, "INSERT INTO embed_jobs (image_uuid, message) VALUES ($1, $2) RETURNING id", image_uuid, message).Scan(&createdId)
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +30,7 @@ func (repository *EmbedJobRepository) Create(ctx context.Context, image_uuid uui
 }
 
 func (repository *EmbedJobRepository) List(ctx context.Context) ([]*models.EmbedJob, error) {
-	rows, err := repository.dbPool.Query(ctx, "SELECT id, status, status_message, image_uuid, message, created_at, updated_at FROM embed_jobs")
+	rows, err := repository.dbPool.Query(ctx, "SELECT id, status, status_message, image_uuid, message, embedded_uuid, created_at, updated_at FROM embed_jobs")
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +38,7 @@ func (repository *EmbedJobRepository) List(ctx context.Context) ([]*models.Embed
 	var jobs []*models.EmbedJob
 	for rows.Next() {
 		var job models.EmbedJob
-		err = rows.Scan(&job.Uuid, &job.Status, &job.StatusMessage, &job.ImageUUID, &job.Message, &job.CreatedAt, &job.UpdatedAt)
+		err = rows.Scan(&job.Uuid, &job.Status, &job.StatusMessage, &job.ImageUuid, &job.Message, &job.EmbeddedUuid, &job.CreatedAt, &job.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -51,13 +53,14 @@ func (repository *EmbedJobRepository) List(ctx context.Context) ([]*models.Embed
 }
 
 func (repository *EmbedJobRepository) GetByID(ctx context.Context, uuid uuid.UUID) (*models.EmbedJob, error) {
-	var job *models.EmbedJob
-	err := repository.dbPool.QueryRow(ctx, "SELECT id, status, status_message, image_uuid, message, created_at, updated_at FROM embed_jobs WHERE id = $1", uuid.String()).Scan(&job.Uuid, &job.Status, &job.StatusMessage, &job.ImageUUID, &job.Message, &job.CreatedAt, &job.UpdatedAt)
+	var job models.EmbedJob
+	err := repository.dbPool.QueryRow(ctx, "SELECT id, status, status_message, image_uuid, message, embedded_uuid, created_at, updated_at FROM embed_jobs WHERE id = $1", uuid.String()).Scan(&job.Uuid, &job.Status, &job.StatusMessage, &job.ImageUuid, &job.Message, &job.EmbeddedUuid, &job.CreatedAt, &job.UpdatedAt)
 	if err != nil {
+		log.Println("Error getting embed_job:", err)
 		return nil, err
 	}
 
-	return job, nil
+	return &job, nil
 }
 
 func (repository *EmbedJobRepository) Delete(ctx context.Context, uuid uuid.UUID) error {
@@ -76,7 +79,7 @@ func (repository *EmbedJobRepository) Complete(ctx context.Context, job *models.
 	}
 	jobForUpdate.Status = models.Complete
 	jobForUpdate.StatusMessage = "Completed"
-	jobForUpdate.EmbeddedImageUUID = &embedded.Uuid
+	jobForUpdate.EmbeddedUuid = &embedded.Uuid
 	jobForUpdate.UpdatedAt = time.Now()
 	err = repository.save(ctx, tx, jobForUpdate)
 	if err != nil {
@@ -117,11 +120,13 @@ func (repository *EmbedJobRepository) MarkFailed(ctx context.Context, job *model
 func (repository *EmbedJobRepository) CheckAndMarkInProgress(ctx context.Context, job *models.EmbedJob) (*models.EmbedJob, error) {
 	tx, err := repository.dbPool.Begin(ctx)
 	if err != nil {
+		log.Println("Error starting transaction", err)
 		return job, err
 	}
 	defer tx.Rollback(ctx)
 	jobForUpdate, err := repository.getForUpdate(ctx, tx, job.Uuid)
 	if err != nil {
+		log.Println("Error getting job for update", err)
 		return job, err
 	}
 	// Another job already claimed it
@@ -134,25 +139,32 @@ func (repository *EmbedJobRepository) CheckAndMarkInProgress(ctx context.Context
 	jobForUpdate.UpdatedAt = time.Now()
 	err = repository.save(ctx, tx, jobForUpdate)
 	if err != nil {
+		log.Println("Error updating job", err)
 		return job, err
 	}
 	err = tx.Commit(ctx)
 	if err != nil {
+		log.Println("Error commiting job", err)
 		return job, err
 	}
 	return jobForUpdate, nil
 }
 
 func (repository *EmbedJobRepository) getForUpdate(ctx context.Context, tx pgx.Tx, uuid uuid.UUID) (*models.EmbedJob, error) {
-	var job *models.EmbedJob
-	err := tx.QueryRow(ctx, "SELECT id, status, status_message, image_uuid, message, created_at, updated_at FROM embed_jobs WHERE id = $1 FOR UPDATE", uuid.String()).Scan(&job.Uuid, &job.Status, &job.StatusMessage, &job.ImageUUID, &job.Message, &job.CreatedAt, &job.UpdatedAt)
+	var job models.EmbedJob
+	err := tx.QueryRow(ctx, "SELECT id, status, status_message, image_uuid, message, created_at, updated_at FROM embed_jobs WHERE id = $1 FOR UPDATE", uuid).Scan(&job.Uuid, &job.Status, &job.StatusMessage, &job.ImageUuid, &job.Message, &job.CreatedAt, &job.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
 
-	return job, nil
+	return &job, nil
 }
 
 func (repository *EmbedJobRepository) save(ctx context.Context, tx pgx.Tx, job *models.EmbedJob) error {
-	return tx.QueryRow(ctx, "UPDATE embed_jobs SET status=$1 status_message=$2 message=$3 updated_at=$4 WHERE id=$4", job.Status, job.StatusMessage, job.Message, job.UpdatedAt).Scan()
+	log.Println("Saving embed_job", job)
+	result, err := tx.Exec(ctx, "UPDATE embed_jobs SET status = $1, status_message = $2, embedded_uuid = $3, updated_at = $4 WHERE id = $5", job.Status, job.StatusMessage, job.EmbeddedUuid, job.UpdatedAt, job.Uuid)
+	if result.RowsAffected() != 1 {
+		return sql.ErrNoRows
+	}
+	return err
 }

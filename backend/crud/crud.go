@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -51,13 +52,15 @@ func (h *ListHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	// TODO Handle Options
 	case http.MethodPost:
-		if creator, ok := any(h).(Creator[T]); ok {
+		creator, ok := h.service.(Creator[T])
+		if ok {
 			h.PostHandler(w, r, creator)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	case http.MethodGet:
-		if lister, ok := any(h).(Lister[T]); ok {
+		lister, ok := h.service.(Lister[T])
+		if ok {
 			h.GetHandler(w, r, lister)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -72,6 +75,7 @@ func (h *ListHandler[T]) PostHandler(w http.ResponseWriter, r *http.Request, cre
 	resource, err := creator.Create(r.Context(), r.Body)
 	if err != nil {
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		log.Println("Failed to create resource:", err)
 		return
 	}
 
@@ -92,6 +96,7 @@ func (h *ListHandler[T]) GetHandler(w http.ResponseWriter, r *http.Request, list
 	err = writeJSON(w, http.StatusAccepted, resources)
 	if err != nil {
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		log.Println("Failed to write response:", err)
 		return
 	}
 }
@@ -108,19 +113,22 @@ func (h *ItemHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	// TODO options
 	case http.MethodGet:
-		if reader, ok := any(h).(Reader[T]); ok {
+		reader, ok := h.service.(Reader[T])
+		if ok {
 			h.GetHandler(w, r, reader)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	case http.MethodPut:
-		if updater, ok := any(h).(Updater[T]); ok {
+		updater, ok := h.service.(Updater[T])
+		if ok {
 			h.PutHandler(w, r, updater)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	case http.MethodDelete:
-		if deleter, ok := any(h).(Deleter[T]); ok {
+		deleter, ok := h.service.(Deleter[T])
+		if ok {
 			h.DeleteHandler(w, r, deleter)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -147,9 +155,10 @@ func (h *ItemHandler[T]) GetHandler(w http.ResponseWriter, r *http.Request, read
 		return
 	}
 
-	err = writeJSON(w, http.StatusAccepted, resource)
+	err = writeJSON(w, http.StatusOK, resource)
 	if err != nil {
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		log.Println("Failed to write response:", err)
 		return
 	}
 }
@@ -199,6 +208,7 @@ func (h *ItemHandler[T]) DeleteHandler(w http.ResponseWriter, r *http.Request, d
 
 	if err != nil {
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		log.Println("Failed to write response:", err)
 		return
 	}
 }

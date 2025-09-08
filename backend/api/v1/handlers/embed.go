@@ -31,7 +31,7 @@ func (h *EmbedJobCrud) Create(ctx context.Context, reader io.Reader) (*models2.E
 	if err != nil {
 		return nil, err
 	}
-	return h.service.CreateJob(ctx, embedRequest.ValidatedUUID)
+	return h.service.CreateJob(ctx, embedRequest.ValidatedUUID, embedRequest.Message)
 }
 
 func (h *EmbedJobCrud) Read(ctx context.Context, uuid uuid.UUID) (*models2.EmbedJob, bool, error) {

@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS embed_jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     status job_status DEFAULT 'Submitted',
-    status_message TEXT,
+    status_message TEXT DEFAULT 'Submitted, pending embed',
     image_uuid UUID,
     message TEXT,
     embedded_uuid UUID,

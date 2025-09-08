@@ -3,7 +3,7 @@ CREATE TYPE job_status AS ENUM ('Submitted', 'In Progress', 'Complete', 'Error',
 CREATE TABLE IF NOT EXISTS extract_jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     status job_status DEFAULT 'Submitted',
-    status_message TEXT DEFAULT 'Submitted, pending execution',
+    status_message TEXT DEFAULT 'Submitted, pending extraction',
     image_uuid UUID,
     message TEXT,
     created_at TIMESTAMP DEFAULT NOW(),
