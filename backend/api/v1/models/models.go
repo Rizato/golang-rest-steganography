@@ -61,7 +61,7 @@ type ExtractJob struct {
 	Status        Status    `json:"status"`
 	StatusMessage string    `json:"status-message"`
 	ImageUUID     uuid.UUID `json:"image-uuid"`
-	Message       string    `json:"message"`
+	Message       *string   `json:"message"`
 	CreatedAt     time.Time `json:"created-at"`
 	UpdatedAt     time.Time `json:"updated-at"`
 }
@@ -72,7 +72,7 @@ func NewExtractJob(image Image) ExtractJob {
 		Status:        Submitted,
 		StatusMessage: "",
 		ImageUUID:     image.Uuid,
-		Message:       "",
+		Message:       nil,
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
 	}

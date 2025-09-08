@@ -46,7 +46,7 @@ func ConfigureViews(dbPool *pgxpool.Pool) http.Handler {
 
 	extractCrud := handlers2.NewExtractJobCrud(extractJobService)
 	// POST/GET to create or list
-	extractListHandler := crud.NewListHandler[**models.ExtractJob](extractCrud)
+	extractListHandler := crud.NewListHandler[*models.ExtractJob](extractCrud)
 	mux.Handle("/api/v1/extract", http.StripPrefix("/api/v1/", extractListHandler))
 
 	// GET/DELETE to access or delete an item

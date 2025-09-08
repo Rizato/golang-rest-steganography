@@ -77,7 +77,7 @@ func (repository *ExtractJobRepository) Complete(ctx context.Context, job *model
 	}
 	jobForUpdate.Status = models.Complete
 	jobForUpdate.StatusMessage = "Completed"
-	jobForUpdate.Message = message
+	jobForUpdate.Message = &message
 	jobForUpdate.UpdatedAt = time.Now()
 	err = repository.save(ctx, tx, jobForUpdate)
 	if err != nil {
