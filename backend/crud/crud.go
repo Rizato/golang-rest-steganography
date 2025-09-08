@@ -155,7 +155,7 @@ func (h *ItemHandler[T]) GetHandler(w http.ResponseWriter, r *http.Request, read
 		return
 	}
 
-	err = writeJSON(w, http.StatusAccepted, resource)
+	err = writeJSON(w, http.StatusOK, resource)
 	if err != nil {
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		log.Println("Failed to write response:", err)

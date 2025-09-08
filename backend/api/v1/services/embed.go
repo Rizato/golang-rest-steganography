@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"steg/api/v1/models"
 	repository2 "steg/api/v1/repository"
@@ -44,7 +45,7 @@ func (service *EmbedJobService) DeleteJob(ctx context.Context, uuid uuid.UUID) e
 }
 
 func (service *EmbedJobService) GetImage(ctx context.Context, job *models.EmbedJob) (*models.Image, error) {
-	return service.ImageRepository.GetByID(ctx, job.ImageUUID)
+	return service.ImageRepository.GetByID(ctx, job.ImageUuid)
 }
 
 func (service *EmbedJobService) Start(ctx context.Context, job *models.EmbedJob) (*models.EmbedJob, error) {
@@ -69,21 +70,34 @@ func (service *EmbedJobService) Start(ctx context.Context, job *models.EmbedJob)
 }
 
 func (service *EmbedJobService) StartEmbedMessage(ctx context.Context, job *models.EmbedJob, image *models.Image) error {
-	embedded, err := service.EmbedMessage(job.Message, image)
+	embedded, err := service.EmbedMessage(ctx, job.Message, image)
 	if err != nil {
 		return err
 	}
 	return service.JobRepository.Complete(ctx, job, embedded)
 }
 
-func (service *EmbedJobService) EmbedMessage(message string, image *models.Image) (*models.Image, error) {
+func (service *EmbedJobService) EmbedMessage(ctx context.Context, message string, image *models.Image) (*models.Image, error) {
 	// Does the steg on the image
 	file, err := os.Open(image.Path)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
+	toEmbed, err := os.CreateTemp("", "*_embed")
+	if err != nil {
+		return nil, err
+	}
+	defer toEmbed.Close()
+	_, err = io.Copy(toEmbed, file)
+	if err != nil {
+		return nil, err
+	}
 
 	// TODO Embded the message
-	return nil, nil
+	embed, err := service.ImageRepository.Create(ctx, toEmbed.Name(), image.Mimetype, image.Size, true)
+	if err != nil {
+		return nil, err
+	}
+	return embed, nil
 }
