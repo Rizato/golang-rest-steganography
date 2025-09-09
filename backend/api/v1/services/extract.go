@@ -3,9 +3,11 @@ package services
 import (
 	"context"
 	"fmt"
+	"image/png"
 	"os"
 	"steg/api/v1/models"
 	repository2 "steg/api/v1/repository"
+	"steg/steganography"
 
 	"github.com/google/uuid"
 )
@@ -83,7 +85,9 @@ func (service *ExtractJobService) ExtractMessage(image *models.Image) (string, e
 		return "", err
 	}
 	defer file.Close()
-
-	// TODO Decode the steg
-	return "Temporary Extract Message", nil
+	toExtract, err := png.Decode(file)
+	if err != nil {
+		return "", err
+	}
+	return steganography.ExtractLsb(toExtract)
 }

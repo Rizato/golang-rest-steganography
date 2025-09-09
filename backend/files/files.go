@@ -9,8 +9,8 @@ import (
 
 // Config
 var (
-	DefaultMaxFilesize int64 = 64 * 1024 * 1024                    // 64 meg
-	DefaultMimeTypes         = []string{"image/jpeg", "image/png"} // just jpeg and png
+	DefaultMaxFilesize int64 = 64 * 1024 * 1024      // 64 meg
+	DefaultMimeTypes         = []string{"image/png"} // just png for now
 	FileTooLargeError        = errors.New("file too large")
 	InvalidMimetype          = errors.New("invalid mimetype")
 )

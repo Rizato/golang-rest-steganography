@@ -3,10 +3,11 @@ package services
 import (
 	"context"
 	"fmt"
-	"io"
+	"image/png"
 	"os"
 	"steg/api/v1/models"
 	repository2 "steg/api/v1/repository"
+	"steg/steganography"
 
 	"github.com/google/uuid"
 )
@@ -84,17 +85,24 @@ func (service *EmbedJobService) EmbedMessage(ctx context.Context, message string
 		return nil, err
 	}
 	defer file.Close()
+	originalImage, err := png.Decode(file)
+	if err != nil {
+		return nil, err
+	}
+	embedImage, err := steganography.EmbedLSB(originalImage, message)
+	if err != nil {
+		return nil, err
+	}
 	toEmbed, err := os.CreateTemp("", "*_embed")
 	if err != nil {
 		return nil, err
 	}
 	defer toEmbed.Close()
-	_, err = io.Copy(toEmbed, file)
+	err = png.Encode(toEmbed, embedImage)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO Embded the message
 	embed, err := service.ImageRepository.Create(ctx, toEmbed.Name(), image.Mimetype, image.Size, true)
 	if err != nil {
 		return nil, err
