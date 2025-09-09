@@ -435,17 +435,17 @@ go build -o steg
 - [x] Request validation
 - [x] PostgreSQL for persistent job storage
 - [x] Web frontend (Created with claude)
+- [x] Actual steganography implementation
+- [x] Asynchronous image processing with goroutines
+- [x] CORS configuration
 
 ### Planned Features
 
-- [ ] Actual steganography implementation
-- [ ] Asynchronous image processing with goroutines
 - [ ] S3 integration for image storage
 - [ ] Message queue with RabbitMQ
 - [ ] Protobuf serialization
 - [ ] Security sandboxing with nsjail
 - [ ] Authentication and authorization
-- [ ] CORS configuration
 - [ ] Automatic file cleanup
 - [ ] Kubernetes deployment
 - [ ] AWS infrastructure
