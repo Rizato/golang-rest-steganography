@@ -19,153 +19,212 @@ var (
 
 // EmbedLsb embeds a text message into a PNG image using LSB steganography
 func EmbedLsb(img image.Image, message string) (image.Image, error) {
-	// Convert image to RGBA for manipulation
 	bounds := img.Bounds()
-	rgba := image.NewRGBA(bounds)
-	draw.Draw(rgba, bounds, img, bounds.Min, draw.Src)
+	width, height := bounds.Dx(), bounds.Dy()
 
-	// Prepare message with length header
+	// Always convert to RGBA for consistent pixel access
+	result := image.NewRGBA(bounds)
+	
+	// Fill with white background first to handle transparency
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			result.Set(x, y, color.RGBA{255, 255, 255, 255})
+		}
+	}
+	
+	// Now draw the image over the white background
+	draw.Draw(result, bounds, img, bounds.Min, draw.Over)
+
+	// Prepare message data with 4-byte big-endian length prefix
 	messageBytes := []byte(message)
-	messageLen := uint32(len(messageBytes))
+	if len(messageBytes) == 0 {
+		return nil, errors.New("message cannot be empty")
+	}
 
-	// Check if image has enough capacity (3 bits per pixel for RGB)
-	maxCapacity := (bounds.Dx() * bounds.Dy() * 3) / 8 // bits / 8 = bytes
-	totalSize := 4 + len(messageBytes)                 // 4 bytes for length + message
+	// Create data to embed: [4 bytes length][message bytes]
+	totalData := make([]byte, 4+len(messageBytes))
+	binary.BigEndian.PutUint32(totalData[0:4], uint32(len(messageBytes)))
+	copy(totalData[4:], messageBytes)
 
-	if totalSize > maxCapacity {
+
+	// Check capacity: we need 8 bits per data byte, 3 channels per pixel
+	totalBitsNeeded := len(totalData) * 8
+	availableBits := width * height * 3 // R, G, B channels
+
+	if totalBitsNeeded > availableBits {
 		return nil, ErrMessageTooLarge
 	}
 
-	// Create data buffer with length prefix
-	data := make([]byte, 0, totalSize)
-	lengthBuf := make([]byte, 4)
-	binary.BigEndian.PutUint32(lengthBuf, messageLen)
-	data = append(data, lengthBuf...)
-	data = append(data, messageBytes...)
-
-	// Embed data into image
-	dataIndex := 0
+	// Embed bits sequentially: R0, G0, B0, R1, G1, B1, ...
 	bitIndex := 0
 
-	for y := bounds.Min.Y; y < bounds.Max.Y && dataIndex < len(data); y++ {
-		for x := bounds.Min.X; x < bounds.Max.X && dataIndex < len(data); x++ {
-			r, g, b, a := rgba.At(x, y).RGBA()
-
-			// Convert to 8-bit values
-			r8 := uint8(r >> 8)
-			g8 := uint8(g >> 8)
-			b8 := uint8(b >> 8)
-			a8 := uint8(a >> 8)
-
-			// Embed bits in R channel
-			if dataIndex < len(data) {
-				bit := (data[dataIndex] >> (7 - bitIndex)) & 1
-				r8 = (r8 & 0xFE) | bit
-				bitIndex++
-				if bitIndex == 8 {
-					bitIndex = 0
-					dataIndex++
-				}
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			if bitIndex >= totalBitsNeeded {
+				break // All data embedded
 			}
 
-			// Embed bits in G channel
-			if dataIndex < len(data) {
-				bit := (data[dataIndex] >> (7 - bitIndex)) & 1
-				g8 = (g8 & 0xFE) | bit
+			// Get current pixel
+			pixel := result.RGBAAt(x, y)
+
+			// Embed in R channel
+			if bitIndex < totalBitsNeeded {
+				byteIndex := bitIndex / 8
+				bitPosition := bitIndex % 8
+				dataBit := (totalData[byteIndex] >> (7 - bitPosition)) & 1
+				pixel.R = (pixel.R & 0xFE) | dataBit
 				bitIndex++
-				if bitIndex == 8 {
-					bitIndex = 0
-					dataIndex++
-				}
 			}
 
-			// Embed bits in B channel
-			if dataIndex < len(data) {
-				bit := (data[dataIndex] >> (7 - bitIndex)) & 1
-				b8 = (b8 & 0xFE) | bit
+			// Embed in G channel
+			if bitIndex < totalBitsNeeded {
+				byteIndex := bitIndex / 8
+				bitPosition := bitIndex % 8
+				dataBit := (totalData[byteIndex] >> (7 - bitPosition)) & 1
+				pixel.G = (pixel.G & 0xFE) | dataBit
 				bitIndex++
-				if bitIndex == 8 {
-					bitIndex = 0
-					dataIndex++
-				}
 			}
 
-			rgba.SetRGBA(x, y, color.RGBA{R: r8, G: g8, B: b8, A: a8})
+			// Embed in B channel
+			if bitIndex < totalBitsNeeded {
+				byteIndex := bitIndex / 8
+				bitPosition := bitIndex % 8
+				dataBit := (totalData[byteIndex] >> (7 - bitPosition)) & 1
+				pixel.B = (pixel.B & 0xFE) | dataBit
+				bitIndex++
+			}
+
+			result.SetRGBA(x, y, pixel)
+		}
+		if bitIndex >= totalBitsNeeded {
+			break
 		}
 	}
 
-	return rgba, nil
+
+	return result, nil
 }
 
 // ExtractLsb extracts a text message from a PNG image using LSB steganography
 func ExtractLsb(img image.Image) (string, error) {
 	bounds := img.Bounds()
+	width, height := bounds.Dx(), bounds.Dy()
 
-	// Extract all data bits first
-	maxBytes := (bounds.Dx() * bounds.Dy() * 3) / 8
-	data := make([]byte, 0, maxBytes)
+	// Always convert to RGBA for consistent pixel access
+	rgba := image.NewRGBA(bounds)
+	
+	// Fill with white background first to handle transparency
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			rgba.Set(x, y, color.RGBA{255, 255, 255, 255})
+		}
+	}
+	
+	// Now draw the image over the white background
+	draw.Draw(rgba, bounds, img, bounds.Min, draw.Over)
+	
 
+	// First, extract 4 bytes to get message length
+	lengthBits := make([]uint8, 32) // 4 bytes * 8 bits = 32 bits
 	bitIndex := 0
-	currentByte := byte(0)
 
-	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-		for x := bounds.Min.X; x < bounds.Max.X; x++ {
-			r, g, b, _ := img.At(x, y).RGBA()
+	for y := 0; y < height && bitIndex < 32; y++ {
+		for x := 0; x < width && bitIndex < 32; x++ {
+			pixel := rgba.RGBAAt(x, y)
 
 			// Extract from R channel
-			r8 := uint8(r >> 8)
-			bit := r8 & 1
-			currentByte = (currentByte << 1) | bit
-			bitIndex++
-			if bitIndex == 8 {
-				data = append(data, currentByte)
-				bitIndex = 0
-				currentByte = 0
+			if bitIndex < 32 {
+				lengthBits[bitIndex] = pixel.R & 1
+				bitIndex++
 			}
 
-			// Extract from G channel
-			g8 := uint8(g >> 8)
-			bit = g8 & 1
-			currentByte = (currentByte << 1) | bit
-			bitIndex++
-			if bitIndex == 8 {
-				data = append(data, currentByte)
-				bitIndex = 0
-				currentByte = 0
+			// Extract from G channel  
+			if bitIndex < 32 {
+				lengthBits[bitIndex] = pixel.G & 1
+				bitIndex++
 			}
 
 			// Extract from B channel
-			b8 := uint8(b >> 8)
-			bit = b8 & 1
-			currentByte = (currentByte << 1) | bit
-			bitIndex++
-			if bitIndex == 8 {
-				data = append(data, currentByte)
-				bitIndex = 0
-				currentByte = 0
-			}
-
-			// Stop if we have enough data for length + max possible message
-			if len(data) >= 4 {
-				messageLen := binary.BigEndian.Uint32(data[:4])
-				if messageLen > 0 && messageLen < uint32(maxBytes) && len(data) >= int(4+messageLen) {
-					return string(data[4 : 4+messageLen]), nil
-				}
+			if bitIndex < 32 {
+				lengthBits[bitIndex] = pixel.B & 1
+				bitIndex++
 			}
 		}
 	}
 
-	// Check if we have at least the length header
-	if len(data) < 4 {
+	// Convert length bits to bytes
+	lengthBytes := make([]byte, 4)
+	for i := 0; i < 4; i++ {
+		for j := 0; j < 8; j++ {
+			bit := lengthBits[i*8+j]
+			lengthBytes[i] = (lengthBytes[i] << 1) | bit
+		}
+	}
+
+	messageLen := binary.BigEndian.Uint32(lengthBytes)
+
+	// Validate message length
+	if messageLen == 0 {
 		return "", ErrNoMessage
 	}
 
-	messageLen := binary.BigEndian.Uint32(data[:4])
-	if messageLen == 0 || messageLen > uint32(len(data)-4) {
-		return "", ErrNoMessage
+	maxPossibleLen := uint32((width*height*3 - 32) / 8) // Available bits minus length header
+	if messageLen > maxPossibleLen {
+		return "", fmt.Errorf("message length %d exceeds maximum possible %d", messageLen, maxPossibleLen)
 	}
 
-	return string(data[4 : 4+messageLen]), nil
+	// Extract message data
+	totalBitsNeeded := 32 + int(messageLen)*8 // Length header + message
+	messageBits := make([]uint8, int(messageLen)*8)
+	bitIndex = 0
+	messageBitIndex := 0
+
+	for y := 0; y < height && bitIndex < totalBitsNeeded; y++ {
+		for x := 0; x < width && bitIndex < totalBitsNeeded; x++ {
+			pixel := rgba.RGBAAt(x, y)
+
+			// Extract from R channel
+			if bitIndex >= 32 && messageBitIndex < len(messageBits) {
+				messageBits[messageBitIndex] = pixel.R & 1
+				messageBitIndex++
+			}
+			bitIndex++
+
+			// Extract from G channel
+			if bitIndex >= 32 && messageBitIndex < len(messageBits) {
+				messageBits[messageBitIndex] = pixel.G & 1
+				messageBitIndex++
+			}
+			bitIndex++
+
+			// Extract from B channel
+			if bitIndex >= 32 && messageBitIndex < len(messageBits) {
+				messageBits[messageBitIndex] = pixel.B & 1
+				messageBitIndex++
+			}
+			bitIndex++
+		}
+	}
+
+	// Convert message bits to bytes
+	messageBytes := make([]byte, messageLen)
+	for i := 0; i < int(messageLen); i++ {
+		for j := 0; j < 8; j++ {
+			if i*8+j < len(messageBits) {
+				bit := messageBits[i*8+j]
+				messageBytes[i] = (messageBytes[i] << 1) | bit
+			}
+		}
+	}
+
+	return string(messageBytes), nil
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // EncodeImageToPNG encodes an image to PNG format bytes
