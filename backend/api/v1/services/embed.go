@@ -2,8 +2,8 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"image/png"
+	"log"
 	"os"
 	"steg/api/v1/models"
 	"steg/api/v1/repository"

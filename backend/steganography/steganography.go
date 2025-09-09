@@ -97,8 +97,8 @@ func EmbedLsb(img image.Image, message string) (image.Image, error) {
 	return rgba, nil
 }
 
-// ExtractLSB extracts a text message from a PNG image using LSB steganography
-func ExtractLSB(img image.Image) (string, error) {
+// ExtractLsb extracts a text message from a PNG image using LSB steganography
+func ExtractLsb(img image.Image) (string, error) {
 	bounds := img.Bounds()
 
 	// Extract all data bits first

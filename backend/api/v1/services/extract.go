@@ -2,22 +2,22 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"image/png"
+	"log"
 	"os"
 	"steg/api/v1/models"
-	repository2 "steg/api/v1/repository"
+	"steg/api/v1/repository"
 	"steg/steganography"
 
 	"github.com/google/uuid"
 )
 
 type ExtractJobService struct {
-	JobRepository   *repository2.ExtractJobRepository
-	ImageRepository *repository2.ImageRepository
+	JobRepository   *repository.ExtractJobRepository
+	ImageRepository *repository.ImageRepository
 }
 
-func NewExtractJobService(jobRepository *repository2.ExtractJobRepository, imageRepository *repository2.ImageRepository) *ExtractJobService {
+func NewExtractJobService(jobRepository *repository.ExtractJobRepository, imageRepository *repository.ImageRepository) *ExtractJobService {
 	return &ExtractJobService{
 		JobRepository:   jobRepository,
 		ImageRepository: imageRepository,
@@ -64,7 +64,6 @@ func (service *ExtractJobService) Start(ctx context.Context, job *models.Extract
 		err := service.StartExtractMessage(ctx, job, image)
 		if err != nil {
 			err = service.JobRepository.MarkFailed(ctx, job, err)
-			log.Println
 			log.Println("Error marking job as failed", err)
 		}
 	}()

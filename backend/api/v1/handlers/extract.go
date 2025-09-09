@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	models2 "steg/api/v1/models"
+	"steg/api/v1/models"
 	"steg/api/v1/services"
 
 	"github.com/google/uuid"
@@ -20,8 +20,8 @@ func NewExtractJobCrud(service *services.ExtractJobService) *ExtractJobCrud {
 	return &ExtractJobCrud{service}
 }
 
-func (h *ExtractJobCrud) Create(ctx context.Context, reader io.Reader) (*models2.ExtractJob, error) {
-	var extractRequest models2.CreateExtractRequest
+func (h *ExtractJobCrud) Create(ctx context.Context, reader io.Reader) (*models.ExtractJob, error) {
+	var extractRequest models.CreateExtractRequest
 	err := json.NewDecoder(reader).Decode(&extractRequest)
 	if err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func (h *ExtractJobCrud) Create(ctx context.Context, reader io.Reader) (*models2
 	return h.service.CreateJob(ctx, extractRequest.ValidatedUUID)
 }
 
-func (h *ExtractJobCrud) Read(ctx context.Context, uuid uuid.UUID) (*models2.ExtractJob, bool, error) {
+func (h *ExtractJobCrud) Read(ctx context.Context, uuid uuid.UUID) (*models.ExtractJob, bool, error) {
 	job, err := h.service.GetJob(ctx, uuid)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, false, nil
@@ -45,7 +45,7 @@ func (h *ExtractJobCrud) Read(ctx context.Context, uuid uuid.UUID) (*models2.Ext
 	return job, true, nil
 }
 
-func (h *ExtractJobCrud) List(ctx context.Context) ([]*models2.ExtractJob, error) {
+func (h *ExtractJobCrud) List(ctx context.Context) ([]*models.ExtractJob, error) {
 	return h.service.ListJobs(ctx)
 }
 
