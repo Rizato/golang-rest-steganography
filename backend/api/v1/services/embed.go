@@ -64,7 +64,7 @@ func (service *EmbedJobService) Start(ctx context.Context, job *models.EmbedJob)
 		err := service.StartEmbedMessage(ctx, job, image)
 		if err != nil {
 			err = service.JobRepository.MarkFailed(ctx, job, err)
-			fmt.Println("Error marking job as failed", err)
+			log.Println("Error marking job as failed", err)
 		}
 	}()
 	return updatedJob, nil

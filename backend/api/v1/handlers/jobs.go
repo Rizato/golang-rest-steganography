@@ -55,6 +55,6 @@ func (handler *JobStartHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Requ
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(job)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 }

@@ -81,7 +81,7 @@ func (h *ListHandler[T]) PostHandler(w http.ResponseWriter, r *http.Request, cre
 
 	err = writeJSON(w, http.StatusCreated, resource)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 }
@@ -181,7 +181,7 @@ func (h *ItemHandler[T]) PutHandler(w http.ResponseWriter, r *http.Request, upda
 	}
 	err = writeJSON(w, http.StatusCreated, resource)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 }
