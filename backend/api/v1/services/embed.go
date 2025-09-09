@@ -89,7 +89,7 @@ func (service *EmbedJobService) EmbedMessage(ctx context.Context, message string
 	if err != nil {
 		return nil, err
 	}
-	embedImage, err := steganography.EmbedLSB(originalImage, message)
+	embedImage, err := steganography.EmbedLsb(originalImage, message)
 	if err != nil {
 		return nil, err
 	}
