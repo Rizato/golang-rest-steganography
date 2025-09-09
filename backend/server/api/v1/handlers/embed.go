@@ -6,8 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"steg/api/v1/models"
-	"steg/api/v1/services"
+	"steg/server/api/v1/requests"
+	"steg/shared/models"
+	"steg/shared/services"
 
 	"github.com/google/uuid"
 )
@@ -21,7 +22,7 @@ func NewEmbedJobCrud(service *services.EmbedJobService) *EmbedJobCrud {
 }
 
 func (h *EmbedJobCrud) Create(ctx context.Context, reader io.Reader) (*models.EmbedJob, error) {
-	var embedRequest models.CreateEmbedRequest
+	var embedRequest requests.CreateEmbedRequest
 	err := json.NewDecoder(reader).Decode(&embedRequest)
 	if err != nil {
 		return nil, err

@@ -2,21 +2,21 @@ package views
 
 import (
 	"net/http"
-	handlers2 "steg/api/v1/handlers"
-	"steg/api/v1/models"
-	repository2 "steg/api/v1/repository"
-	services2 "steg/api/v1/services"
-	"steg/crud"
-	"steg/middleware"
+	handlers2 "steg/server/api/v1/handlers"
+	"steg/server/crud"
+	"steg/server/middleware"
+	"steg/shared/models"
+	repositories2 "steg/shared/repositories"
+	services2 "steg/shared/services"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func ConfigureViews(dbPool *pgxpool.Pool) http.Handler {
 	mux := http.NewServeMux()
-	imageRepository := repository2.NewImageRepository(dbPool)
-	embedJobRepository := repository2.NewEmbedJobRepository(dbPool)
-	extractJobRepository := repository2.NewExtractJobRepository(dbPool)
+	imageRepository := repositories2.NewImageRepository(dbPool)
+	embedJobRepository := repositories2.NewEmbedJobRepository(dbPool)
+	extractJobRepository := repositories2.NewExtractJobRepository(dbPool)
 
 	imageService := services2.NewImageService(imageRepository)
 	embedJobService := services2.NewEmbedJobService(embedJobRepository, imageRepository)

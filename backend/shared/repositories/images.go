@@ -1,8 +1,8 @@
-package repository
+package repositories
 
 import (
 	"context"
-	"steg/api/v1/models"
+	"steg/shared/models"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"

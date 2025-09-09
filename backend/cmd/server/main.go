@@ -6,8 +6,8 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"steg/api/v1/views"
-	"steg/middleware"
+	"steg/server/api/v1/views"
+	"steg/server/middleware"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )

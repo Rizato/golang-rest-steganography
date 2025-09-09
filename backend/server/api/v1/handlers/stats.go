@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"steg/api/v1/services"
+	"steg/shared/services"
 )
 
 type StatsHandler struct {

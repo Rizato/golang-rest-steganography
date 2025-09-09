@@ -5,19 +5,19 @@ import (
 	"image/png"
 	"log"
 	"os"
-	"steg/api/v1/models"
-	"steg/api/v1/repository"
+	"steg/shared/models"
+	"steg/shared/repositories"
 	"steg/steganography"
 
 	"github.com/google/uuid"
 )
 
 type ExtractJobService struct {
-	JobRepository   *repository.ExtractJobRepository
-	ImageRepository *repository.ImageRepository
+	JobRepository   *repositories.ExtractJobRepository
+	ImageRepository *repositories.ImageRepository
 }
 
-func NewExtractJobService(jobRepository *repository.ExtractJobRepository, imageRepository *repository.ImageRepository) *ExtractJobService {
+func NewExtractJobService(jobRepository *repositories.ExtractJobRepository, imageRepository *repositories.ImageRepository) *ExtractJobService {
 	return &ExtractJobService{
 		JobRepository:   jobRepository,
 		ImageRepository: imageRepository,

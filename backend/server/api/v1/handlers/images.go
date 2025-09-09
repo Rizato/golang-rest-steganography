@@ -9,9 +9,9 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"steg/api/v1/models"
-	"steg/api/v1/services"
-	files "steg/files"
+	files "steg/shared/files"
+	"steg/shared/models"
+	"steg/shared/services"
 
 	"github.com/google/uuid"
 )

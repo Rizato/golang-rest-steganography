@@ -3,17 +3,17 @@ package services
 import (
 	"context"
 	"os"
-	"steg/api/v1/models"
-	"steg/api/v1/repository"
+	"steg/shared/models"
+	"steg/shared/repositories"
 
 	"github.com/google/uuid"
 )
 
 type ImageService struct {
-	ImageRepository *repository.ImageRepository
+	ImageRepository *repositories.ImageRepository
 }
 
-func NewImageService(imageRepository *repository.ImageRepository) *ImageService {
+func NewImageService(imageRepository *repositories.ImageRepository) *ImageService {
 	return &ImageService{ImageRepository: imageRepository}
 }
 

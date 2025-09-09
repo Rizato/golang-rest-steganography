@@ -6,8 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"steg/api/v1/models"
-	"steg/api/v1/services"
+	"steg/server/api/v1/requests"
+	"steg/shared/models"
+	"steg/shared/services"
 
 	"github.com/google/uuid"
 )
@@ -21,7 +22,7 @@ func NewExtractJobCrud(service *services.ExtractJobService) *ExtractJobCrud {
 }
 
 func (h *ExtractJobCrud) Create(ctx context.Context, reader io.Reader) (*models.ExtractJob, error) {
-	var extractRequest models.CreateExtractRequest
+	var extractRequest requests.CreateExtractRequest
 	err := json.NewDecoder(reader).Decode(&extractRequest)
 	if err != nil {
 		return nil, err

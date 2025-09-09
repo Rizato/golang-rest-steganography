@@ -6,8 +6,8 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"steg/api/v1/repository"
-	"steg/api/v1/services"
+	"steg/shared/repositories"
+	"steg/shared/services"
 
 	"github.com/google/uuid"
 )
@@ -44,7 +44,7 @@ func (handler *JobStartHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	job, err = handler.service.Start(r.Context(), job)
-	if err != nil && !errors.Is(err, repository.AlreadyInProgress) {
+	if err != nil && !errors.Is(err, repositories.AlreadyInProgress) {
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		log.Println("Error starting job:", err)
 		return

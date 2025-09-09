@@ -1,10 +1,10 @@
-package repository
+package repositories
 
 import (
 	"context"
 	"database/sql"
 	"log"
-	"steg/api/v1/models"
+	"steg/shared/models"
 	"time"
 
 	"github.com/google/uuid"
