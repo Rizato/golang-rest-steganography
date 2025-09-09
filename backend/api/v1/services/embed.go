@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"image/png"
+	"io"
 	"log"
 	"os"
 	"steg/api/v1/models"
@@ -104,8 +105,17 @@ func (service *EmbedJobService) EmbedMessage(ctx context.Context, message string
 	if err != nil {
 		return nil, err
 	}
+	_, err = toEmbed.Seek(0, io.SeekStart)
+	if err != nil {
+		return nil, err
+	}
+	// Get the actual file size
+	fileInfo, err := toEmbed.Stat()
+	if err != nil {
+		return nil, err
+	}
 
-	embed, err := service.ImageRepository.Create(ctx, toEmbed.Name(), image.Mimetype, image.Size, true)
+	embed, err := service.ImageRepository.Create(ctx, toEmbed.Name(), image.Mimetype, fileInfo.Size(), true)
 	if err != nil {
 		return nil, err
 	}
