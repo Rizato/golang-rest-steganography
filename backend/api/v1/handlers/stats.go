@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
+	"log"
 	"net/http"
 	"steg/api/v1/services"
 )
@@ -26,6 +26,6 @@ func (h *StatsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	stats := h.stats.GetStats(r.Context())
 	err := json.NewEncoder(w).Encode(stats)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 }

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -131,7 +130,7 @@ func HandleUpload(service *services.ImageService) http.Handler {
 		w.Header().Set("Content-Type", "application/json")
 		err = json.NewEncoder(w).Encode(image)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 	})
 }
@@ -172,7 +171,7 @@ func HandleDownload(service *services.ImageService) http.Handler {
 
 		_, err = io.Copy(w, f)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 	})
 }

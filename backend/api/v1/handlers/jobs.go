@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"steg/api/v1/repository"
@@ -55,6 +54,6 @@ func (handler *JobStartHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Requ
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(job)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 }

@@ -2,22 +2,23 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"image/png"
+	"io"
+	"log"
 	"os"
 	"steg/api/v1/models"
-	repository2 "steg/api/v1/repository"
+	"steg/api/v1/repository"
 	"steg/steganography"
 
 	"github.com/google/uuid"
 )
 
 type EmbedJobService struct {
-	JobRepository   *repository2.EmbedJobRepository
-	ImageRepository *repository2.ImageRepository
+	JobRepository   *repository.EmbedJobRepository
+	ImageRepository *repository.ImageRepository
 }
 
-func NewEmbedJobService(jobRepository *repository2.EmbedJobRepository, imageRepository *repository2.ImageRepository) *EmbedJobService {
+func NewEmbedJobService(jobRepository *repository.EmbedJobRepository, imageRepository *repository.ImageRepository) *EmbedJobService {
 	return &EmbedJobService{
 		JobRepository:   jobRepository,
 		ImageRepository: imageRepository,
@@ -64,7 +65,9 @@ func (service *EmbedJobService) Start(ctx context.Context, job *models.EmbedJob)
 		err := service.StartEmbedMessage(ctx, job, image)
 		if err != nil {
 			err = service.JobRepository.MarkFailed(ctx, job, err)
-			fmt.Println("Error marking job as failed", err)
+			if err != nil {
+				log.Println("Error marking job as failed", err)
+			}
 		}
 	}()
 	return updatedJob, nil
@@ -89,7 +92,7 @@ func (service *EmbedJobService) EmbedMessage(ctx context.Context, message string
 	if err != nil {
 		return nil, err
 	}
-	embedImage, err := steganography.EmbedLSB(originalImage, message)
+	embedImage, err := steganography.EmbedLsb(originalImage, message)
 	if err != nil {
 		return nil, err
 	}
@@ -98,12 +101,26 @@ func (service *EmbedJobService) EmbedMessage(ctx context.Context, message string
 		return nil, err
 	}
 	defer toEmbed.Close()
-	err = png.Encode(toEmbed, embedImage)
+	// Use no compression and no filtering to preserve LSBs
+	encoder := &png.Encoder{
+		CompressionLevel: png.NoCompression,
+		BufferPool:       nil,
+	}
+	err = encoder.Encode(toEmbed, embedImage)
+	if err != nil {
+		return nil, err
+	}
+	_, err = toEmbed.Seek(0, io.SeekStart)
+	if err != nil {
+		return nil, err
+	}
+	// Get the actual file size
+	fileInfo, err := toEmbed.Stat()
 	if err != nil {
 		return nil, err
 	}
 
-	embed, err := service.ImageRepository.Create(ctx, toEmbed.Name(), image.Mimetype, image.Size, true)
+	embed, err := service.ImageRepository.Create(ctx, toEmbed.Name(), image.Mimetype, fileInfo.Size(), true)
 	if err != nil {
 		return nil, err
 	}
