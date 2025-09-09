@@ -64,7 +64,9 @@ func (service *ExtractJobService) Start(ctx context.Context, job *models.Extract
 		err := service.StartExtractMessage(ctx, job, image)
 		if err != nil {
 			err = service.JobRepository.MarkFailed(ctx, job, err)
-			log.Println("Error marking job as failed", err)
+			if err != nil {
+				log.Println("Error marking job as failed", err)
+			}
 		}
 	}()
 	return updatedJob, nil
