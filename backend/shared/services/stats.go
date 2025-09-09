@@ -3,17 +3,17 @@ package services
 import (
 	"context"
 	"steg/server/middleware"
-	repositories2 "steg/shared/repositories"
+	"steg/shared/repositories"
 )
 
 type StatsService struct {
-	Image   *repositories2.ImageRepository
-	Embed   *repositories2.EmbedJobRepository
-	Extract *repositories2.ExtractJobRepository
+	Image   *repositories.ImageRepository
+	Embed   *repositories.EmbedJobRepository
+	Extract *repositories.ExtractJobRepository
 	Stats   *middleware.Stats
 }
 
-func NewStatsService(imageRepository *repositories2.ImageRepository, embedJobRepo *repositories2.EmbedJobRepository, extractJobRepo *repositories2.ExtractJobRepository, stats *middleware.Stats) *StatsService {
+func NewStatsService(imageRepository *repositories.ImageRepository, embedJobRepo *repositories.EmbedJobRepository, extractJobRepo *repositories.ExtractJobRepository, stats *middleware.Stats) *StatsService {
 	return &StatsService{
 		imageRepository,
 		embedJobRepo,
