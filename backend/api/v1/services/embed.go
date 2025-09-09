@@ -101,7 +101,12 @@ func (service *EmbedJobService) EmbedMessage(ctx context.Context, message string
 		return nil, err
 	}
 	defer toEmbed.Close()
-	err = png.Encode(toEmbed, embedImage)
+	// Use no compression and no filtering to preserve LSBs
+	encoder := &png.Encoder{
+		CompressionLevel: png.NoCompression,
+		BufferPool:       nil,
+	}
+	err = encoder.Encode(toEmbed, embedImage)
 	if err != nil {
 		return nil, err
 	}
