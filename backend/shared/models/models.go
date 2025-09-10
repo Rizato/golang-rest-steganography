@@ -27,15 +27,14 @@ const (
 )
 
 type EmbedJob struct {
-	Uuid          uuid.UUID `json:"uuid"`
-	Status        Status    `json:"status"`
-	StatusMessage string    `json:"status-message"`
-	// TODO Separate requests per layer, for nested objects
-	ImageUuid    uuid.UUID  `json:"image-uuid"`
-	Message      string     `json:"message"`
-	EmbeddedUuid *uuid.UUID `json:"embedded-uuid"`
-	CreatedAt    time.Time  `json:"created-at"`
-	UpdatedAt    time.Time  `json:"updated-at"`
+	Uuid          uuid.UUID  `json:"uuid"`
+	Status        Status     `json:"status"`
+	StatusMessage string     `json:"status-message"`
+	ImageUuid     uuid.UUID  `json:"image-uuid"`
+	Message       string     `json:"message"`
+	EmbeddedUuid  *uuid.UUID `json:"embedded-uuid"`
+	CreatedAt     time.Time  `json:"created-at"`
+	UpdatedAt     time.Time  `json:"updated-at"`
 }
 
 type ExtractJob struct {

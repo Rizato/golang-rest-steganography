@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"image/png"
 	"io"
 	"log"
@@ -12,6 +13,8 @@ import (
 
 	"github.com/google/uuid"
 )
+
+var NotEmbedJob = errors.New("not embed job")
 
 type EmbedJobService struct {
 	JobRepository   *repositories.EmbedJobRepository
@@ -38,7 +41,7 @@ func (service *EmbedJobService) ListJobs(ctx context.Context) ([]*models.EmbedJo
 	return service.JobRepository.List(ctx)
 }
 
-func (service *EmbedJobService) GetJob(ctx context.Context, uuid uuid.UUID) (*models.EmbedJob, error) {
+func (service *EmbedJobService) GetEmbedJob(ctx context.Context, uuid uuid.UUID) (*models.EmbedJob, error) {
 	return service.JobRepository.GetByID(ctx, uuid)
 }
 
@@ -50,27 +53,27 @@ func (service *EmbedJobService) GetImage(ctx context.Context, job *models.EmbedJ
 	return service.ImageRepository.GetByID(ctx, job.ImageUuid)
 }
 
-func (service *EmbedJobService) Start(ctx context.Context, job *models.EmbedJob) (*models.EmbedJob, error) {
+func (service *EmbedJobService) Embed(ctx context.Context, job *models.EmbedJob) error {
 	image, err := service.GetImage(ctx, job)
 	if err != nil {
-		return job, err
+		return err
 	}
 	// Get's a lock on the row to check if in progress
 	updatedJob, err := service.JobRepository.CheckAndMarkInProgress(ctx, job)
 	if err != nil {
-		return updatedJob, err
+		return err
 	}
 	go func() {
 		ctx := context.Background()
-		err := service.StartEmbedMessage(ctx, job, image)
+		err := service.StartEmbedMessage(ctx, updatedJob, image)
 		if err != nil {
-			err = service.JobRepository.MarkFailed(ctx, job, err)
+			err = service.JobRepository.MarkFailed(ctx, updatedJob, err)
 			if err != nil {
 				log.Println("Error marking job as failed", err)
 			}
 		}
 	}()
-	return updatedJob, nil
+	return nil
 }
 
 func (service *EmbedJobService) StartEmbedMessage(ctx context.Context, job *models.EmbedJob, image *models.Image) error {
@@ -125,4 +128,18 @@ func (service *EmbedJobService) EmbedMessage(ctx context.Context, message string
 		return nil, err
 	}
 	return embed, nil
+}
+
+// JobService interface implementation
+
+func (service *EmbedJobService) GetJob(ctx context.Context, uuid uuid.UUID) (any, error) {
+	return service.GetEmbedJob(ctx, uuid)
+}
+
+func (service *EmbedJobService) Execute(ctx context.Context, job any) error {
+	embedJob, ok := job.(*models.EmbedJob)
+	if !ok {
+		return NotEmbedJob
+	}
+	return service.Embed(ctx, embedJob)
 }

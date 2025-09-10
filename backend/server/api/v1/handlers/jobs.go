@@ -12,15 +12,15 @@ import (
 	"github.com/google/uuid"
 )
 
-type JobStartHandler[T any] struct {
-	service services.JobService[T]
+type JobStartHandler struct {
+	service services.JobService
 }
 
-func NewJobStartHandler[T any](service services.JobService[T]) *JobStartHandler[T] {
-	return &JobStartHandler[T]{service: service}
+func NewJobStartHandler(service services.JobService) *JobStartHandler {
+	return &JobStartHandler{service: service}
 }
 
-func (handler *JobStartHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (handler *JobStartHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if (*r).Method != http.MethodPost {
 		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
 		return
@@ -43,10 +43,19 @@ func (handler *JobStartHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Requ
 		log.Println("Error Finding job", err)
 		return
 	}
-	job, err = handler.service.Start(r.Context(), job)
+
+	// Instead of calling start, push to rabbitmq
+	err = handler.service.Execute(r.Context(), job)
 	if err != nil && !errors.Is(err, repositories.AlreadyInProgress) {
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		log.Println("Error starting job:", err)
+		return
+	}
+
+	job, err = handler.service.GetJob(r.Context(), jobUUID)
+	if err != nil {
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		log.Println("Error Finding job", err)
 		return
 	}
 

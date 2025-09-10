@@ -36,7 +36,7 @@ func (h *EmbedJobCrud) Create(ctx context.Context, reader io.Reader) (*models.Em
 }
 
 func (h *EmbedJobCrud) Read(ctx context.Context, uuid uuid.UUID) (*models.EmbedJob, bool, error) {
-	job, err := h.service.GetJob(ctx, uuid)
+	job, err := h.service.GetEmbedJob(ctx, uuid)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, false, nil
 	}

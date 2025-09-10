@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type JobService[T any] interface {
-	GetJob(ctx context.Context, uuid uuid.UUID) (T, error)
-	Start(ctx context.Context, job T) (T, error)
+type JobService interface {
+	GetJob(ctx context.Context, uuid uuid.UUID) (any, error)
+	Execute(ctx context.Context, job any) error
 }

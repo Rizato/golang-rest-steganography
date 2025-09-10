@@ -36,7 +36,7 @@ func (h *ExtractJobCrud) Create(ctx context.Context, reader io.Reader) (*models.
 }
 
 func (h *ExtractJobCrud) Read(ctx context.Context, uuid uuid.UUID) (*models.ExtractJob, bool, error) {
-	job, err := h.service.GetJob(ctx, uuid)
+	job, err := h.service.GetExtractJob(ctx, uuid)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, false, nil
 	}

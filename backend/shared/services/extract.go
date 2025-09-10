@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"image/png"
 	"log"
 	"os"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/google/uuid"
 )
+
+var NotExtractJob = errors.New("not extract job")
 
 type ExtractJobService struct {
 	JobRepository   *repositories.ExtractJobRepository
@@ -37,7 +40,7 @@ func (service *ExtractJobService) ListJobs(ctx context.Context) ([]*models.Extra
 	return service.JobRepository.List(ctx)
 }
 
-func (service *ExtractJobService) GetJob(ctx context.Context, uuid uuid.UUID) (*models.ExtractJob, error) {
+func (service *ExtractJobService) GetExtractJob(ctx context.Context, uuid uuid.UUID) (*models.ExtractJob, error) {
 	return service.JobRepository.GetByID(ctx, uuid)
 }
 
@@ -49,27 +52,27 @@ func (service *ExtractJobService) GetImage(ctx context.Context, job *models.Extr
 	return service.ImageRepository.GetByID(ctx, job.ImageUUID)
 }
 
-func (service *ExtractJobService) Start(ctx context.Context, job *models.ExtractJob) (*models.ExtractJob, error) {
+func (service ExtractJobService) ExtractToDb(ctx context.Context, job *models.ExtractJob) error {
 	image, err := service.GetImage(ctx, job)
 	if err != nil {
-		return job, err
+		return err
 	}
 	// Gets a lock on the row to check if in progress
 	updatedJob, err := service.JobRepository.CheckAndMarkInProgress(ctx, job)
 	if err != nil {
-		return updatedJob, err
+		return err
 	}
 	go func() {
 		ctx := context.Background()
-		err := service.StartExtractMessage(ctx, job, image)
+		err := service.StartExtractMessage(ctx, updatedJob, image)
 		if err != nil {
-			err = service.JobRepository.MarkFailed(ctx, job, err)
+			err = service.JobRepository.MarkFailed(ctx, updatedJob, err)
 			if err != nil {
 				log.Println("Error marking job as failed", err)
 			}
 		}
 	}()
-	return updatedJob, nil
+	return nil
 }
 
 func (service *ExtractJobService) StartExtractMessage(ctx context.Context, job *models.ExtractJob, image *models.Image) error {
@@ -92,4 +95,18 @@ func (service *ExtractJobService) ExtractMessage(image *models.Image) (string, e
 		return "", err
 	}
 	return steganography.ExtractLsb(toExtract)
+}
+
+// JobService interface implementation
+
+func (service *ExtractJobService) GetJob(ctx context.Context, uuid uuid.UUID) (any, error) {
+	return service.GetExtractJob(ctx, uuid)
+}
+
+func (service *ExtractJobService) Execute(ctx context.Context, job any) error {
+	extractJob, ok := job.(*models.ExtractJob)
+	if !ok {
+		return NotExtractJob
+	}
+	return service.ExtractToDb(ctx, extractJob)
 }
