@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"image/png"
 	"io"
@@ -132,14 +133,17 @@ func (service *EmbedJobService) EmbedMessage(ctx context.Context, message string
 
 // JobService interface implementation
 
-func (service *EmbedJobService) GetJob(ctx context.Context, uuid uuid.UUID) (any, error) {
-	return service.GetEmbedJob(ctx, uuid)
+func (service *EmbedJobService) Exists(ctx context.Context, uuid uuid.UUID) (bool, error) {
+	job, err := service.GetEmbedJob(ctx, uuid)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return job != nil, nil
 }
 
-func (service *EmbedJobService) Execute(ctx context.Context, job any) error {
-	embedJob, ok := job.(*models.EmbedJob)
-	if !ok {
-		return NotEmbedJob
-	}
-	return service.Embed(ctx, embedJob)
+func (service *EmbedJobService) GetType() models.JobType {
+	return models.Extract
 }

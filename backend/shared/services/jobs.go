@@ -2,11 +2,12 @@ package services
 
 import (
 	"context"
+	"steg/shared/models"
 
 	"github.com/google/uuid"
 )
 
 type JobService interface {
-	GetJob(ctx context.Context, uuid uuid.UUID) (any, error)
-	Execute(ctx context.Context, job any) error
+	GetType() models.JobType
+	Exists(context.Context, uuid.UUID) (bool, error)
 }

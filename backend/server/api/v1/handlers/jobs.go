@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
-	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
@@ -13,11 +11,12 @@ import (
 )
 
 type JobStartHandler struct {
-	service services.JobService
+	jobService    services.JobService
+	rabbitService *services.RabbitService
 }
 
-func NewJobStartHandler(service services.JobService) *JobStartHandler {
-	return &JobStartHandler{service: service}
+func NewJobStartHandler(jobService services.JobService, rabbitService *services.RabbitService) *JobStartHandler {
+	return &JobStartHandler{jobService, rabbitService}
 }
 
 func (handler *JobStartHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -32,36 +31,29 @@ func (handler *JobStartHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Kicks off the job
-	job, err := handler.service.GetJob(r.Context(), jobUUID)
-	if errors.Is(err, sql.ErrNoRows) {
+	// Check that UUID is valid
+	exists, err := handler.jobService.Exists(r.Context(), jobUUID)
+	if err != nil {
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		log.Println("Error Finding job", err)
+		return
+	}
+	if !exists {
 		http.Error(w, "404 Not Found", http.StatusNotFound)
 		return
 	}
-	if err != nil {
-		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
-		log.Println("Error Finding job", err)
-		return
-	}
 
-	// Instead of calling start, push to rabbitmq
-	err = handler.service.Execute(r.Context(), job)
+	// Kick off job
+	jobType := handler.jobService.GetType()
+	err = handler.rabbitService.Publish(r.Context(), jobType, jobUUID)
 	if err != nil && !errors.Is(err, repositories.AlreadyInProgress) {
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
-		log.Println("Error starting job:", err)
-		return
-	}
-
-	job, err = handler.service.GetJob(r.Context(), jobUUID)
-	if err != nil {
-		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
-		log.Println("Error Finding job", err)
+		log.Println("Error pushing to rabbit:", err)
 		return
 	}
 
 	w.WriteHeader(http.StatusAccepted)
 	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(job)
 	if err != nil {
 		log.Println(err)
 	}

@@ -1,1 +1,5 @@
-package stegtool
+package main
+
+func main() {
+
+}

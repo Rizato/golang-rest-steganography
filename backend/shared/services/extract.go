@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"image/png"
 	"log"
@@ -99,14 +100,17 @@ func (service *ExtractJobService) ExtractMessage(image *models.Image) (string, e
 
 // JobService interface implementation
 
-func (service *ExtractJobService) GetJob(ctx context.Context, uuid uuid.UUID) (any, error) {
-	return service.GetExtractJob(ctx, uuid)
+func (service *ExtractJobService) Exists(ctx context.Context, uuid uuid.UUID) (bool, error) {
+	job, err := service.GetExtractJob(ctx, uuid)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return job != nil, nil
 }
 
-func (service *ExtractJobService) Execute(ctx context.Context, job any) error {
-	extractJob, ok := job.(*models.ExtractJob)
-	if !ok {
-		return NotExtractJob
-	}
-	return service.ExtractToDb(ctx, extractJob)
+func (service *ExtractJobService) GetType() models.JobType {
+	return models.Extract
 }

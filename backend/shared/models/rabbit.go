@@ -18,3 +18,7 @@ type JobMessage struct {
 	Job  JobType
 	Uuid uuid.UUID
 }
+
+func NewJobMessage(job JobType, uuid uuid.UUID) JobMessage {
+	return JobMessage{job, uuid}
+}
