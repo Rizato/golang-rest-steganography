@@ -40,7 +40,7 @@ type BaseCrud[T any] interface {
 }
 
 type ListHandler[T any] struct {
-	service BaseCrud[T]
+	crud BaseCrud[T]
 }
 
 func NewListHandler[T any](crud BaseCrud[T]) *ListHandler[T] {
@@ -51,26 +51,25 @@ func (h *ListHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	// TODO Handle Options
 	case http.MethodPost:
-		creator, ok := h.service.(Creator[T])
+		creator, ok := h.crud.(Creator[T])
 		if ok {
-			h.PostHandler(w, r, creator)
+			h.HandlePost(w, r, creator)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	case http.MethodGet:
-		lister, ok := h.service.(Lister[T])
+		lister, ok := h.crud.(Lister[T])
 		if ok {
-			h.GetHandler(w, r, lister)
+			h.HandleList(w, r, lister)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	default:
 		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
-		break
 	}
 }
 
-func (h *ListHandler[T]) PostHandler(w http.ResponseWriter, r *http.Request, creator Creator[T]) {
+func (h *ListHandler[T]) HandlePost(w http.ResponseWriter, r *http.Request, creator Creator[T]) {
 	resource, err := creator.Create(r.Context(), r.Body)
 	if err != nil {
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
@@ -85,7 +84,7 @@ func (h *ListHandler[T]) PostHandler(w http.ResponseWriter, r *http.Request, cre
 	}
 }
 
-func (h *ListHandler[T]) GetHandler(w http.ResponseWriter, r *http.Request, lister Lister[T]) {
+func (h *ListHandler[T]) HandleList(w http.ResponseWriter, r *http.Request, lister Lister[T]) {
 	resources, err := lister.List(r.Context())
 	if err != nil {
 		http.Error(w, "400 Bad Request", http.StatusBadRequest)
@@ -101,7 +100,7 @@ func (h *ListHandler[T]) GetHandler(w http.ResponseWriter, r *http.Request, list
 }
 
 type ItemHandler[T any] struct {
-	service BaseCrud[T]
+	crud BaseCrud[T]
 }
 
 func NewItemHandler[T any](crud BaseCrud[T]) *ItemHandler[T] {
@@ -112,23 +111,23 @@ func (h *ItemHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	// TODO options
 	case http.MethodGet:
-		reader, ok := h.service.(Reader[T])
+		reader, ok := h.crud.(Reader[T])
 		if ok {
-			h.GetHandler(w, r, reader)
+			h.HandleGet(w, r, reader)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	case http.MethodPut:
-		updater, ok := h.service.(Updater[T])
+		updater, ok := h.crud.(Updater[T])
 		if ok {
-			h.PutHandler(w, r, updater)
+			h.HandlePut(w, r, updater)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	case http.MethodDelete:
-		deleter, ok := h.service.(Deleter[T])
+		deleter, ok := h.crud.(Deleter[T])
 		if ok {
-			h.DeleteHandler(w, r, deleter)
+			h.HandleDelete(w, r, deleter)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -138,7 +137,7 @@ func (h *ItemHandler[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *ItemHandler[T]) GetHandler(w http.ResponseWriter, r *http.Request, reader Reader[T]) {
+func (h *ItemHandler[T]) HandleGet(w http.ResponseWriter, r *http.Request, reader Reader[T]) {
 	resourceId, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		http.Error(w, "400 Bad Request", http.StatusBadRequest)
@@ -162,7 +161,7 @@ func (h *ItemHandler[T]) GetHandler(w http.ResponseWriter, r *http.Request, read
 	}
 }
 
-func (h *ItemHandler[T]) PutHandler(w http.ResponseWriter, r *http.Request, updater Updater[T]) {
+func (h *ItemHandler[T]) HandlePut(w http.ResponseWriter, r *http.Request, updater Updater[T]) {
 	resourceUUID, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		http.Error(w, "400 Bad Request", http.StatusBadRequest)
@@ -185,7 +184,7 @@ func (h *ItemHandler[T]) PutHandler(w http.ResponseWriter, r *http.Request, upda
 	}
 }
 
-func (h *ItemHandler[T]) DeleteHandler(w http.ResponseWriter, r *http.Request, deleter Deleter[T]) {
+func (h *ItemHandler[T]) HandleDelete(w http.ResponseWriter, r *http.Request, deleter Deleter[T]) {
 	resourceUUID, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		http.Error(w, "400 Bad Request", http.StatusBadRequest)
