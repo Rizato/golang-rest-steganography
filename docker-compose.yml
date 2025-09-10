@@ -14,6 +14,16 @@ services:
         - "8080:8080"
       environment:
         - DATABASE_URL=${DATABASE_URL}
+        - AMQP_URL=${AMQP_URL}
+        - TASK_QUEUE=${TASK_QUEUE}
+  worker:
+    build: backend
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - AMQP_URL=${AMQP_URL}
+      - TASK_QUEUE=${TASK_QUEUE}
+    command:
+      - /app/worker
 
   migrate:
     image: "migrate/migrate"
@@ -37,3 +47,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  rabbitmq:
+    image: "rabbitmq:4.1-management"
+    ports:
+      - "5672:5672"
+      - "15672:15672"

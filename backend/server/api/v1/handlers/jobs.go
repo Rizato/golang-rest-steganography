@@ -44,6 +44,7 @@ func (handler *JobStartHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	}
 
 	// Kick off job
+	// Also need to mark in progress so it isn't submitted again
 	jobType := handler.jobService.GetType()
 	err = handler.rabbitService.Publish(r.Context(), jobType, jobUUID)
 	if err != nil && !errors.Is(err, repositories.AlreadyInProgress) {

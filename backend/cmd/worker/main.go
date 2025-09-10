@@ -1,4 +1,4 @@
-package worker
+package main
 
 import (
 	"context"
@@ -131,24 +131,28 @@ func (h *MessageHandler) HandleMessage(d amqp.Delivery) error {
 func (h *MessageHandler) HandleJob(message models.JobMessage) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 	defer cancel()
-	service, err := h.getService(message.Job)
-	if err != nil {
-		return err
+	switch message.Job {
+	case models.Embed:
+		return h.HandleEmbed(ctx, message)
+	case models.Extract:
+		return h.HandleExtract(ctx, message)
+	default:
+		return InvalidJob
 	}
-	job, err := service.GetJob(ctx, message.Uuid)
-	if err != nil {
-		return err
-	}
-	return service.Execute(ctx, job)
 }
 
-func (h *MessageHandler) getService(job models.JobType) (services.JobService, error) {
-	switch job {
-	case models.Embed:
-		return h.embedService, nil
-	case models.Extract:
-		return h.extractService, nil
-	default:
-		return nil, InvalidJob
+func (h *MessageHandler) HandleEmbed(ctx context.Context, message models.JobMessage) error {
+	job, err := h.embedService.GetEmbedJob(ctx, message.Uuid)
+	if err != nil {
+		return err
 	}
+	return h.embedService.Embed(ctx, job)
+}
+
+func (h *MessageHandler) HandleExtract(ctx context.Context, message models.JobMessage) error {
+	job, err := h.extractService.GetExtractJob(ctx, message.Uuid)
+	if err != nil {
+		return err
+	}
+	return h.extractService.ExtractToDb(ctx, job)
 }
