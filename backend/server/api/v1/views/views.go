@@ -6,20 +6,19 @@ import (
 	"steg/server/crud"
 	"steg/server/middleware"
 	"steg/shared/models"
+	"steg/shared/rabbit"
 	"steg/shared/repositories"
 	"steg/shared/services"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func ConfigureViews(dbPool *pgxpool.Pool, channel *amqp.Channel, queue amqp.Queue) http.Handler {
+func ConfigureViews(dbPool *pgxpool.Pool, publisher *rabbit.RabbitPublisher) http.Handler {
 	mux := http.NewServeMux()
 	imageRepository := repositories.NewImageRepository(dbPool)
 	embedJobRepository := repositories.NewEmbedJobRepository(dbPool)
 	extractJobRepository := repositories.NewExtractJobRepository(dbPool)
 
-	rabbitService := services.NewRabbitSenderService(channel, queue)
 	imageService := services.NewImageService(imageRepository)
 	embedJobService := services.NewEmbedJobService(embedJobRepository, imageRepository)
 	extractJobService := services.NewExtractJobService(extractJobRepository, imageRepository)
@@ -43,7 +42,7 @@ func ConfigureViews(dbPool *pgxpool.Pool, channel *amqp.Channel, queue amqp.Queu
 	mux.Handle("/api/v1/embed/{id}", http.StripPrefix("/api/v1/", embedJobHandler))
 
 	// POST to trigger the processing
-	embedStartHandler := handlers.NewJobStartHandler(embedJobService, rabbitService)
+	embedStartHandler := handlers.NewJobStartHandler(embedJobService, publisher)
 	mux.Handle("POST /api/v1/embed/{id}/start", http.StripPrefix("/api/v1/", embedStartHandler))
 
 	extractCrud := handlers.NewExtractJobCrud(extractJobService)
@@ -56,7 +55,7 @@ func ConfigureViews(dbPool *pgxpool.Pool, channel *amqp.Channel, queue amqp.Queu
 	mux.Handle("/api/v1/extract/{id}", http.StripPrefix("/api/v1/", extractJobHandler))
 
 	// POST to trigger the processing
-	extractStartHandler := handlers.NewJobStartHandler(extractJobService, rabbitService)
+	extractStartHandler := handlers.NewJobStartHandler(extractJobService, publisher)
 	mux.Handle("POST /api/v1/extract/{id}/start", http.StripPrefix("/api/v1/", extractStartHandler))
 
 	// V1 stats

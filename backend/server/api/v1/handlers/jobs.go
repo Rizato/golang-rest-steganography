@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"steg/shared/rabbit"
 	"steg/shared/repositories"
 	"steg/shared/services"
 
@@ -12,10 +13,10 @@ import (
 
 type JobStartHandler struct {
 	jobService    services.JobService
-	rabbitService *services.RabbitService
+	rabbitService *rabbit.RabbitPublisher
 }
 
-func NewJobStartHandler(jobService services.JobService, rabbitService *services.RabbitService) *JobStartHandler {
+func NewJobStartHandler(jobService services.JobService, rabbitService *rabbit.RabbitPublisher) *JobStartHandler {
 	return &JobStartHandler{jobService, rabbitService}
 }
 
