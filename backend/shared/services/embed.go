@@ -145,5 +145,5 @@ func (service *EmbedJobService) Exists(ctx context.Context, uuid uuid.UUID) (boo
 }
 
 func (service *EmbedJobService) GetType() models.JobType {
-	return models.Extract
+	return models.Embed
 }

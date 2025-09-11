@@ -438,11 +438,11 @@ go build -o steg
 - [x] Actual steganography implementation
 - [x] Asynchronous image processing with goroutines
 - [x] CORS configuration
+- [x] Message queue with RabbitMQ
 
 ### Planned Features
 
 - [ ] S3 integration for image storage
-- [ ] Message queue with RabbitMQ
 - [ ] Protobuf serialization
 - [ ] Security sandboxing with nsjail
 - [ ] Authentication and authorization
