@@ -57,7 +57,8 @@ class ApiService {
       throw new Error(`Start embed job failed: ${errorText}`)
     }
 
-    return await response.json()
+    // Server no longer returns job data, just success status
+    return { success: true }
   }
 
   async getEmbedJob(jobUuid) {
@@ -111,7 +112,8 @@ class ApiService {
       throw new Error(`Start extract job failed: ${errorText}`)
     }
 
-    return await response.json()
+    // Server no longer returns job data, just success status
+    return { success: true }
   }
 
   async getExtractJob(jobUuid) {
@@ -137,16 +139,16 @@ class ApiService {
       onProgress('Starting embed process...')
       await this.startEmbedJob(jobData.uuid)
       
-      // Poll for completion
+      // Poll for completion using the existing job object
       onProgress('Processing...')
-      let job = await this.getEmbedJob(jobData.uuid)
+      let job = jobData
       
-      while (job.status === 'pending' || job.status === 'running') {
+      while (job.status === 'Submitted' || job.status === 'In Progress') {
         await new Promise(resolve => setTimeout(resolve, 1000))
         job = await this.getEmbedJob(jobData.uuid)
       }
 
-      if (job.status === 'failed') {
+      if (job.status === 'Failed') {
         throw new Error(`Embed failed: ${job['status-message'] || 'Unknown error'}`)
       }
 
@@ -174,16 +176,16 @@ class ApiService {
       onProgress('Starting extract process...')
       await this.startExtractJob(jobData.uuid)
       
-      // Poll for completion
+      // Poll for completion using the existing job object
       onProgress('Processing...')
-      let job = await this.getExtractJob(jobData.uuid)
+      let job = jobData
       
-      while (job.status === 'pending' || job.status === 'running') {
+      while (job.status === 'Submitted' || job.status === 'In Progress') {
         await new Promise(resolve => setTimeout(resolve, 1000))
         job = await this.getExtractJob(jobData.uuid)
       }
 
-      if (job.status === 'failed') {
+      if (job.status === 'Failed') {
         throw new Error(`Extract failed: ${job['status-message'] || 'Unknown error'}`)
       }
 

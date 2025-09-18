@@ -435,14 +435,14 @@ go build -o steg
 - [x] Request validation
 - [x] PostgreSQL for persistent job storage
 - [x] Web frontend (Created with claude)
-- [x] Actual steganography implementation
+- [x] Actual steganography implementation (created with claude)
 - [x] Asynchronous image processing with goroutines
 - [x] CORS configuration
+- [x] Message queue with RabbitMQ
 
 ### Planned Features
 
 - [ ] S3 integration for image storage
-- [ ] Message queue with RabbitMQ
 - [ ] Protobuf serialization
 - [ ] Security sandboxing with nsjail
 - [ ] Authentication and authorization

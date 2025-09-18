@@ -7,6 +7,8 @@ services:
       - BACKEND_URL=http://localhost:8080
     depends_on:
       - api
+    networks:
+      - app-network
 
   api:
       build: backend
@@ -14,6 +16,34 @@ services:
         - "8080:8080"
       environment:
         - DATABASE_URL=${DATABASE_URL}
+        - AMQP_URL=${AMQP_URL}
+        - TASK_QUEUE=${TASK_QUEUE}
+      volumes:
+          - images:/tmp
+      networks:
+        - app-network
+      depends_on:
+        rabbitmq:
+          condition: service_healthy
+        postgres:
+          condition: service_healthy
+  worker:
+    build: backend
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - AMQP_URL=${AMQP_URL}
+      - TASK_QUEUE=${TASK_QUEUE}
+    command:
+      - /app/worker
+    volumes:
+      - images:/tmp
+    networks:
+      - app-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
 
   migrate:
     image: "migrate/migrate"
@@ -23,6 +53,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - app-network
 
   postgres:
     image: "postgres"
@@ -37,3 +69,25 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
+
+  rabbitmq:
+    image: "rabbitmq:4.1-management"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD-SHELL", "rabbitmq-diagnostics -q ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  images: # Define the named volume
