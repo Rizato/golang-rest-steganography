@@ -84,12 +84,9 @@ func (service *ExtractJobService) StartExtractMessage(ctx context.Context, job *
 
 func (service *ExtractJobService) ExtractMessage(image *models.Image) (string, error) {
 	// Does the steg on the image
-	cmd := exec.Command("nsjail", "--config", "/app/steg.cfg", "--", "/app/extract", "-i", image.Path)
+	cmd := exec.Command("/app/nsjail", "--config", "/app/steg.cfg", "--", "/app/extract", "-i", image.Path)
 	if errors.Is(cmd.Err, exec.ErrDot) {
 		cmd.Err = nil
-	}
-	if err := cmd.Run(); err != nil {
-		return "", err
 	}
 	data, err := cmd.Output()
 	if err != nil {
