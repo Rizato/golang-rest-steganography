@@ -1,4 +1,4 @@
-FROM golang:alpine AS builder
+FROM golang:trixie AS builder
 WORKDIR /build
 COPY . .
 RUN mkdir bin
@@ -9,7 +9,14 @@ RUN go build -o bin/embed ./cmd/embed
 RUN go build -o bin/extract ./cmd/extract
 
 
-FROM alpine
+FROM debian:trixie
+
+RUN apt-get -y update && apt-get install -y \
+    libc6 \
+    libstdc++6 \
+    libprotobuf32 \
+    libnl-route-3-200
+
 WORKDIR /app
 COPY --from=builder /build/bin/worker .
 COPY --from=builder /build/bin/server .
