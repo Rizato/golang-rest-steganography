@@ -435,7 +435,7 @@ go build -o steg
 - [x] Request validation
 - [x] PostgreSQL for persistent job storage
 - [x] Web frontend (Created with claude)
-- [x] Actual steganography implementation
+- [x] Actual steganography implementation (created with claude)
 - [x] Asynchronous image processing with goroutines
 - [x] CORS configuration
 - [x] Message queue with RabbitMQ
