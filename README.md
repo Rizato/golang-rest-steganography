@@ -439,12 +439,12 @@ go build -o steg
 - [x] Asynchronous image processing with goroutines
 - [x] CORS configuration
 - [x] Message queue with RabbitMQ
+- [x] Security sandboxing with nsjail
 
 ### Planned Features
 
 - [ ] S3 integration for image storage
 - [ ] Protobuf serialization
-- [ ] Security sandboxing with nsjail
 - [ ] Authentication and authorization
 - [ ] Automatic file cleanup
 - [ ] Kubernetes deployment

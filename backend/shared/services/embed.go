@@ -4,13 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"image/png"
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"steg/shared/models"
 	"steg/shared/repositories"
-	"steg/steganography"
 
 	"github.com/google/uuid"
 )
@@ -86,45 +85,32 @@ func (service *EmbedJobService) StartEmbedMessage(ctx context.Context, job *mode
 }
 
 func (service *EmbedJobService) EmbedMessage(ctx context.Context, message string, image *models.Image) (*models.Image, error) {
-	// Does the steg on the image
-	file, err := os.Open(image.Path)
+	// Create the output file
+	embedded, err := os.CreateTemp("", "*_embed")
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
-	originalImage, err := png.Decode(file)
-	if err != nil {
+	defer embedded.Close()
+
+	cmd := exec.Command("/app/nsjail", "--config", "/app/steg.cfg", "--", "/app/embed", "-i", image.Path, "-m", message, "-o", embedded.Name())
+	if errors.Is(cmd.Err, exec.ErrDot) {
+		cmd.Err = nil
+	}
+	if err := cmd.Run(); err != nil {
 		return nil, err
 	}
-	embedImage, err := steganography.EmbedLsb(originalImage, message)
-	if err != nil {
-		return nil, err
-	}
-	toEmbed, err := os.CreateTemp("", "*_embed")
-	if err != nil {
-		return nil, err
-	}
-	defer toEmbed.Close()
-	// Use no compression and no filtering to preserve LSBs
-	encoder := &png.Encoder{
-		CompressionLevel: png.NoCompression,
-		BufferPool:       nil,
-	}
-	err = encoder.Encode(toEmbed, embedImage)
-	if err != nil {
-		return nil, err
-	}
-	_, err = toEmbed.Seek(0, io.SeekStart)
+
+	_, err = embedded.Seek(0, io.SeekStart)
 	if err != nil {
 		return nil, err
 	}
 	// Get the actual file size
-	fileInfo, err := toEmbed.Stat()
+	fileInfo, err := embedded.Stat()
 	if err != nil {
 		return nil, err
 	}
 
-	embed, err := service.ImageRepository.Create(ctx, toEmbed.Name(), image.Mimetype, fileInfo.Size(), true)
+	embed, err := service.ImageRepository.Create(ctx, embedded.Name(), image.Mimetype, fileInfo.Size(), true)
 	if err != nil {
 		return nil, err
 	}

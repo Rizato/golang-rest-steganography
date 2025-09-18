@@ -142,14 +142,25 @@ class ApiService {
       // Poll for completion using the existing job object
       onProgress('Processing...')
       let job = jobData
-      
+
+      // Check initial status before entering polling loop
+      if (job.status === 'Failed' || job.status === 'Error') {
+        throw new Error(`Embed failed: ${job['status-message'] || 'Unknown error'}`)
+      }
+
       while (job.status === 'Submitted' || job.status === 'In Progress') {
         await new Promise(resolve => setTimeout(resolve, 1000))
         job = await this.getEmbedJob(jobData.uuid)
+
+        // Check status after each poll
+        if (job.status === 'Failed' || job.status === 'Error') {
+          throw new Error(`Embed failed: ${job['status-message'] || 'Unknown error'}`)
+        }
       }
 
-      if (job.status === 'Failed') {
-        throw new Error(`Embed failed: ${job['status-message'] || 'Unknown error'}`)
+      // Check if embedded-uuid exists before attempting download
+      if (!job['embedded-uuid']) {
+        throw new Error('Embed completed but no output file was generated')
       }
 
       onProgress('Downloading result...')
@@ -179,14 +190,20 @@ class ApiService {
       // Poll for completion using the existing job object
       onProgress('Processing...')
       let job = jobData
-      
+
+      // Check initial status before entering polling loop
+      if (job.status === 'Failed' || job.status === 'Error') {
+        throw new Error(`Extract failed: ${job['status-message'] || 'Unknown error'}`)
+      }
+
       while (job.status === 'Submitted' || job.status === 'In Progress') {
         await new Promise(resolve => setTimeout(resolve, 1000))
         job = await this.getExtractJob(jobData.uuid)
-      }
 
-      if (job.status === 'Failed') {
-        throw new Error(`Extract failed: ${job['status-message'] || 'Unknown error'}`)
+        // Check status after each poll
+        if (job.status === 'Failed' || job.status === 'Error') {
+          throw new Error(`Extract failed: ${job['status-message'] || 'Unknown error'}`)
+        }
       }
 
       return {

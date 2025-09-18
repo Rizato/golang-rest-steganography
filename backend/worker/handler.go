@@ -21,12 +21,8 @@ func NewJobMessageHandler(embedService *services.EmbedJobService, extractService
 }
 
 func (h *JobMessageHandler) HandleMessage(ctx context.Context, d amqp.Delivery) error {
-	err := d.Ack(false)
-	if err != nil {
-		return err
-	}
 	var message models.JobMessage
-	err = json.Unmarshal(d.Body, &message)
+	err := json.Unmarshal(d.Body, &message)
 	if err != nil {
 		return err
 	}
