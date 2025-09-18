@@ -5,13 +5,15 @@ RUN mkdir bin
 
 RUN go build -o bin/worker ./cmd/worker
 RUN go build -o bin/server ./cmd/server
-RUN go build -o bin/stegtool ./cmd/stegtool
+RUN go build -o bin/embed ./cmd/embed
+RUN go build -o bin/extract ./cmd/extract
 
 
 FROM alpine
 WORKDIR /app
 COPY --from=builder /build/bin/worker .
 COPY --from=builder /build/bin/server .
-COPY --from=builder /build/bin/stegtool .
+COPY --from=builder /build/bin/embed .
+COPY --from=builder /build/bin/extract .
 
 CMD ["/app/server"]

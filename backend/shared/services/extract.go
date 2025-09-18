@@ -4,12 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"image/png"
 	"log"
-	"os"
+	"os/exec"
 	"steg/shared/models"
 	"steg/shared/repositories"
-	"steg/steganography"
 
 	"github.com/google/uuid"
 )
@@ -86,16 +84,18 @@ func (service *ExtractJobService) StartExtractMessage(ctx context.Context, job *
 
 func (service *ExtractJobService) ExtractMessage(image *models.Image) (string, error) {
 	// Does the steg on the image
-	file, err := os.Open(image.Path)
+	cmd := exec.Command("extract", "-i", image.Path)
+	if errors.Is(cmd.Err, exec.ErrDot) {
+		cmd.Err = nil
+	}
+	if err := cmd.Run(); err != nil {
+		return "", err
+	}
+	data, err := cmd.Output()
 	if err != nil {
 		return "", err
 	}
-	defer file.Close()
-	toExtract, err := png.Decode(file)
-	if err != nil {
-		return "", err
-	}
-	return steganography.ExtractLsb(toExtract)
+	return string(data), nil
 }
 
 // JobService interface implementation
