@@ -15,5 +15,8 @@ COPY --from=builder /build/bin/worker .
 COPY --from=builder /build/bin/server .
 COPY --from=builder /build/bin/embed .
 COPY --from=builder /build/bin/extract .
+COPY --from=nsjailcontainer /bin/nsjail .
+
+COPY steg.cfg .
 
 CMD ["/app/server"]
