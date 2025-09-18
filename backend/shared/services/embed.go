@@ -92,7 +92,7 @@ func (service *EmbedJobService) EmbedMessage(ctx context.Context, message string
 	}
 	defer embedded.Close()
 
-	cmd := exec.Command("embed", "-i", image.Path, "-m", message, "-o", embedded.Name())
+	cmd := exec.Command("nsjail", "--config", "/app/steg.cfg", "--", "/app/embed", "-i", image.Path, "-m", message, "-o", embedded.Name())
 	if errors.Is(cmd.Err, exec.ErrDot) {
 		cmd.Err = nil
 	}
