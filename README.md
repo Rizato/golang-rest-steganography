@@ -20,48 +20,55 @@ files that appear completely normal but contain hidden data.
 
 - **Image Message Embedding**: Embed text messages within JPG and PNG images
 - **Image Message Extracting**: Extract hidden messages from steganographic images
-- **Async Processing**: Non-blocking job processing with status tracking
-- **RESTful API**: Clean HTTP endpoints for all operations
+- **Async Processing**: Non-blocking job processing with RabbitMQ message queue
+- **Security Sandboxing**: NsJail isolation for steganography operations
+- **RESTful API**: Clean HTTP endpoints with Go 1.24 pattern matching
+- **Web Interface**: Vue.js frontend for easy interaction
+- **Database Persistence**: PostgreSQL for reliable job and file storage
 - **Middleware Stack**: Request logging, CORS, and statistics tracking
 - **Generic Handler Pattern**: Type-safe, reusable handlers using Go generics
+- **Docker Deployment**: Containerized architecture for easy deployment
 
 ## Project Structure
 
 ```
 .
-├── main.go                  # Application entry point
-├── go.mod                   # Go module dependencies
-├── go.sum                   # Dependency checksums
+├── docker-compose.yml       # Docker services configuration
 ├── LICENSE                  # Project license
 ├── README.md                # This file
-├── api/ 
-│   └── v1/ 
-│       ├── handlers/        # HTTP request handlers
-│       │   ├── crud.go      # CRUD operations
-│       │   ├── handlers.go  # Job-specific handlers
-│       │   ├── requests.go  # Request processing logic
-│       │   └── uploads.go   # File upload handling
-│       ├── models/          # Data models and storage
-│       │   ├── datastore.go # Thread-safe job storage
-│       │   └── models.go    # Job models and status enums
-│       └── views/           # Route configuration
-│           └── views.go     # API endpoint routing
-├── crud/                    # CRUD interfaces
-│   └── crud.go              # Generic CRUD operations
-├── files/                   # File handling utilities
-│   └── files.go             # File validation and processing
-└── middleware/              # HTTP middleware
-    ├── middleware.go        # Middleware configuration
-    ├── log.go               # Request logging
-    └── stats.go             # Statistics collection
+├── backend/                 # Backend Go service
+│   ├── Dockerfile           # Backend container configuration
+│   ├── go.mod               # Go module dependencies
+│   ├── go.sum               # Dependency checksums
+│   ├── steg.cfg             # NsJail security configuration
+│   ├── cmd/                 # Application entry points
+│   │   ├── server/          # REST API server
+│   │   └── worker/          # Async job worker
+│   ├── server/              # HTTP server implementation
+│   │   ├── handlers/        # HTTP request handlers
+│   │   ├── middleware/      # HTTP middleware
+│   │   └── views/           # Route configuration
+│   ├── worker/              # Job processing worker
+│   │   └── processor/       # Job processing logic
+│   ├── shared/              # Shared components
+│   │   ├── models/          # Data models
+│   │   ├── datastore/       # Database interactions
+│   │   └── rabbitmq/        # Message queue client
+│   ├── steganography/       # Steganography implementation
+│   │   └── stegtool/        # Core steganography logic
+│   └── migrations/          # Database migrations
+└── frontend/                # Vue.js web interface
+    ├── src/                 # Frontend source code
+    ├── public/              # Static assets
+    └── package.json         # Node.js dependencies
 ```
 
 ## Installation
 
 ### Prerequisites
 
-- Go 1.24 or higher
--
+- Go 1.24 or higher (required for URL pattern matching)
+- Docker and Docker Compose
 - Git
 
 ### Setup
@@ -73,19 +80,23 @@ git clone git@github.com:Rizato/golang-rest-steganography.git
 cd golang-rest-steganography
 ```
 
-2. Install dependencies:
+2. Start all services with Docker Compose:
 
 ```bash
-go mod download
+docker-compose up --build
 ```
 
-3. Run the application:
+This will start:
+- PostgreSQL database on port 5432
+- RabbitMQ message queue on ports 5672 (AMQP) and 15672 (Management UI)
+- Backend API server on port 8080
+- Frontend web interface on port 3000
+- Background worker for processing jobs
 
-```bash
-go run main.go
-```
-
-The server will start on port 8080.
+3. Access the application:
+   - Web Interface: http://localhost:3000
+   - API: http://localhost:8080/api/v1
+   - RabbitMQ Management: http://localhost:15672 (guest/guest)
 
 ## API Documentation
 
@@ -412,13 +423,36 @@ UpdatedAt     time.Time
 ### Running Tests
 
 ```bash
+cd backend
 go test ./...
 ```
 
-### Building
+### Building with Docker
 
 ```bash
-go build -o steg
+docker-compose build
+```
+
+### Running Individual Services
+
+For development, you can run services individually:
+
+```bash
+# Start infrastructure services only
+docker-compose up postgres rabbitmq
+
+# Run backend locally
+cd backend
+go run cmd/server/main.go
+
+# Run worker locally
+cd backend
+go run cmd/worker/main.go
+
+# Run frontend locally
+cd frontend
+npm install
+npm run dev
 ```
 
 ## Roadmap
